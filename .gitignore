@@ -1,5 +1,19 @@
+# Python byte‑code & caches
 __pycache__/
-.env
-*.sqlite3
-*.log
+*.py[cod]
 
+# Virtual‑env / conda env folders (if you keep them in the repo)
+venv/
+env/
+conda-env/
+
+# Secrets – never commit your API key
+.env
+*.env
+
+# Large data files you don’t want in the repo
+cricket_data.csv
+
+# Logs / analysis artefacts
+*.log
+*.sqlite3
