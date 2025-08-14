@@ -48,16 +48,28 @@ A comprehensive cricket analytics chatbot powered by LangChain and OpenAI that c
    pip install -r requirements.txt
    ```
 
-3. **Set up environment variables**
-   Create a `.env` file in the root directory:
-   ```env
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
+3. **Set up Ollama (Free LLM)**
+   ```bash
+   # Run the setup script
+   python setup_ollama.py
+   
+   # Or manually:
+   # 1. Install Ollama: https://ollama.ai/
+   # 2. Start Ollama: ollama serve
+   # 3. Pull a model: ollama pull llama2
    ```
 
 4. **Run the application**
    ```bash
    streamlit run app.py
    ```
+
+## 💰 Why Free?
+
+- **No API costs**: Runs completely locally
+- **No rate limits**: Use as much as you want
+- **Privacy**: All data stays on your machine
+- **Offline**: Works without internet after setup
 
 ## 📊 Dataset Overview
 
@@ -185,13 +197,11 @@ The chatbot features a modern, intuitive interface with:
 
 ## 🔧 Configuration
 
-### Environment Variables
-- `DEEPSEEK_API_KEY`: Your DeepSeek API key (required)
-
-### Model Configuration
-- **Default Model**: deepseek-chat
+### Free LLM Setup
+- **Ollama**: Completely free local LLM inference
+- **Default Model**: llama2 (can be changed to mistral, codellama, etc.)
 - **Temperature**: 0 (for consistent responses)
-- **Streaming**: Enabled for better UX
+- **No API Keys Required**: Runs entirely locally
 
 ### Data Processing
 - **Caching**: 2-hour cache for improved performance
@@ -229,7 +239,7 @@ This project is licensed under the MIT License.
 
 - **IPL 2025 Data**: Comprehensive ball-by-ball cricket data
 - **LangChain**: Framework for building LLM applications
-- **DeepSeek**: DeepSeek language model
+- **Ollama**: Free local LLM inference
 - **Streamlit**: Web application framework
 - **Pandas**: Data manipulation library
 
