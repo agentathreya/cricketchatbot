@@ -20,7 +20,7 @@ from langchain.agents import AgentType
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.tools import StructuredTool
 from langchain_openai import ChatOpenAI
-from langchain.callbacks import StreamlitCallbackHandler
+from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
 # -------------------------------------------------
 # 1️⃣  Load environment variables & CSV data
@@ -60,7 +60,7 @@ def load_data(csv_path: str) -> pd.DataFrame:
     Load the CSV and perform a minimal clean‑up.
     Adjust column names here if your CSV differs.
     """
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(csv_path, low_memory=False)
 
     # Cast numeric columns (invalid entries become NaN)
     df["over"] = pd.to_numeric(df["over"], errors="coerce")
@@ -338,6 +338,7 @@ agent = create_pandas_dataframe_agent(
     tools=tools,
     verbose=True,
     handle_parsing_errors=True,
+    allow_dangerous_code=True,  # Required for pandas agent functionality
 )
 
 # -------------------------------------------------
