@@ -17,11 +17,9 @@ from dotenv import load_dotenv
 # ✅  Correct imports for LangChain 0.3.x
 # -------------------------------------------------
 from langchain.agents import AgentType
-from langchain_experimental.agents.agent_toolkits.pandas import (
-    create_pandas_dataframe_agent,
-)
+from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.tools import StructuredTool
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.callbacks import StreamlitCallbackHandler
 
 # -------------------------------------------------
