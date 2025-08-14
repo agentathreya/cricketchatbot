@@ -334,12 +334,16 @@ tools.extend([
 agent = create_pandas_dataframe_agent(
     llm=llm,
     df=df,
-    agent_type=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-    tools=tools,
+    agent_type="zero-shot-react-description",
     verbose=True,
-    handle_parsing_errors=True,
     allow_dangerous_code=True,  # Required for pandas agent functionality
 )
+
+# Add our custom tools to the agent
+if hasattr(agent, 'tools'):
+    agent.tools.extend(tools)
+else:
+    agent.tools = tools
 
 # -------------------------------------------------
 # 4️⃣  Streamlit UI
