@@ -650,3 +650,127 @@ def win_probability(df: pd.DataFrame, team: str) -> str:
 def best_partnerships(df: pd.DataFrame) -> str:
     """Get the best batting partnerships."""
     return get_best_partnerships(df)
+
+
+# ----------------------------------------------------------------------
+# 10️⃣  Team-Specific Analysis
+# ----------------------------------------------------------------------
+def get_team_best_batters(df: pd.DataFrame, team_name: str) -> str:
+    """Get the best batters for a specific team."""
+    team_df = df[df["batting_team"] == team_name]
+    
+    if team_df.empty:
+        return f"No data found for {team_name}."
+    
+    agg = (
+        team_df.groupby(["batter"])
+        .agg(
+            runs=("runs_batter", "sum"),
+            balls=("balls_faced", "sum"),
+            fours=("isFour", "sum"),
+            sixes=("isSix", "sum")
+        )
+        .reset_index()
+        .sort_values("runs", ascending=False)
+        .head(10)
+    )
+    
+    # Calculate strike rate safely
+    agg["strike_rate"] = (agg["runs"] / agg["balls"] * 100).round(2)
+    agg["strike_rate"] = agg["strike_rate"].fillna(0)
+    
+    return f"""
+## Best Batters for {team_name}
+
+{agg.to_markdown(index=False)}
+"""
+
+
+def get_team_best_bowlers(df: pd.DataFrame, team_name: str) -> str:
+    """Get the best bowlers for a specific team."""
+    team_df = df[df["bowling_team"] == team_name]
+    
+    if team_df.empty:
+        return f"No bowling data found for {team_name}."
+    
+    # Wickets taken
+    wickets_df = team_df[team_df["isWicket"] == True]
+    wickets_agg = (
+        wickets_df.groupby(["bowler"])
+        .size()
+        .reset_index(name="wickets")
+    )
+    
+    # Economy rate
+    economy_agg = (
+        team_df.groupby(["bowler"])
+        .agg(
+            deliveries=("ball_no", "count"),
+            runs_conceded=("runs_total", "sum"),
+            economy=("runs_total", lambda x: (x.sum() / len(x)) * 6)
+        )
+        .reset_index()
+    )
+    
+    # Merge wickets and economy
+    result = economy_agg.merge(wickets_agg, on="bowler", how="left")
+    result["wickets"] = result["wickets"].fillna(0).astype(int)
+    result = result.sort_values(["wickets", "economy"], ascending=[False, True]).head(10)
+    result["economy"] = result["economy"].round(2)
+    
+    return f"""
+## Best Bowlers for {team_name}
+
+{result.to_markdown(index=False)}
+"""
+
+
+def get_team_overall_stats(df: pd.DataFrame, team_name: str) -> str:
+    """Get overall statistics for a specific team."""
+    batting_df = df[df["batting_team"] == team_name]
+    bowling_df = df[df["bowling_team"] == team_name]
+    
+    if batting_df.empty and bowling_df.empty:
+        return f"No data found for {team_name}."
+    
+    # Batting stats
+    batting_stats = {
+        "Total Runs": batting_df["runs_batter"].sum(),
+        "Total Wickets Lost": batting_df["isWicket"].sum(),
+        "Total Fours": batting_df["isFour"].sum(),
+        "Total Sixes": batting_df["isSix"].sum(),
+        "Matches Played": batting_df["match_id"].nunique()
+    }
+    
+    # Bowling stats
+    bowling_stats = {
+        "Total Wickets Taken": bowling_df["isWicket"].sum(),
+        "Total Runs Conceded": bowling_df["runs_total"].sum(),
+        "Total Extras": bowling_df["wides"].sum() + bowling_df["noballs"].sum()
+    }
+    
+    # Calculate averages
+    if batting_stats["Matches Played"] > 0:
+        batting_stats["Average Score"] = (batting_stats["Total Runs"] / batting_stats["Matches Played"]).round(2)
+    
+    return f"""
+## Overall Statistics for {team_name}
+
+### Batting Statistics
+- **Total Runs**: {batting_stats['Total Runs']}
+- **Total Wickets Lost**: {batting_stats['Total Wickets Lost']}
+- **Total Fours**: {batting_stats['Total Fours']}
+- **Total Sixes**: {batting_stats['Total Sixes']}
+- **Matches Played**: {batting_stats['Matches Played']}
+- **Average Score**: {batting_stats.get('Average Score', 'N/A')}
+
+### Bowling Statistics
+- **Total Wickets Taken**: {bowling_stats['Total Wickets Taken']}
+- **Total Runs Conceded**: {bowling_stats['Total Runs Conceded']}
+- **Total Extras**: {bowling_stats['Total Extras']}
+"""
+
+
+# ----------------------------------------------------------------------
+# 11️⃣  Utility Functions (kept for compatibility)
+# ----------------------------------------------------------------------

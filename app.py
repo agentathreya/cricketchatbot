@@ -137,6 +137,11 @@ from utils import (
     get_middle_overs_stats,
     get_death_overs_stats,
     
+    # Team-Specific Analysis
+    get_team_best_batters,
+    get_team_best_bowlers,
+    get_team_overall_stats,
+    
     # Utility Functions
     top_strike_rate,
     win_probability,
@@ -288,6 +293,25 @@ death_overs_stats_tool = StructuredTool.from_function(
     description="Get death overs (16-20) statistics for batting and bowling"
 )
 
+# ------------------- Team-Specific Tools -------------------------
+team_batters_tool = StructuredTool.from_function(
+    func=lambda team_name: get_team_best_batters(df, team_name),
+    name="get_team_best_batters",
+    description="Get the best batters for a specific team (e.g., Chennai Super Kings, Mumbai Indians)"
+)
+
+team_bowlers_tool = StructuredTool.from_function(
+    func=lambda team_name: get_team_best_bowlers(df, team_name),
+    name="get_team_best_bowlers",
+    description="Get the best bowlers for a specific team"
+)
+
+team_stats_tool = StructuredTool.from_function(
+    func=lambda team_name: get_team_overall_stats(df, team_name),
+    name="get_team_overall_stats",
+    description="Get overall statistics for a specific team"
+)
+
 # ------------------- Utility Tools -------------------------
 strike_rate_tool = StructuredTool.from_function(
     func=lambda min_balls: top_strike_rate(df, min_balls),
@@ -324,6 +348,9 @@ tools.extend([
     powerplay_tool,
     middle_overs_tool,
     death_overs_stats_tool,
+    team_batters_tool,
+    team_bowlers_tool,
+    team_stats_tool,
     strike_rate_tool,
     win_prob_tool,
 ])
@@ -344,6 +371,31 @@ if hasattr(agent, 'tools'):
     agent.tools.extend(tools)
 else:
     agent.tools = tools
+
+# Set a better system prompt for the agent
+if hasattr(agent, 'agent') and hasattr(agent.agent, 'llm_chain'):
+    agent.agent.llm_chain.prompt.template = """You are a cricket analytics expert assistant. You have access to comprehensive IPL 2025 cricket data and specialized tools to analyze it.
+
+When users ask questions about cricket, use the appropriate tools to provide detailed, accurate answers. Always use the specific tools available rather than generic responses.
+
+Available teams in the dataset:
+- Chennai Super Kings
+- Mumbai Indians
+- Royal Challengers Bengaluru
+- Kolkata Knight Riders
+- Delhi Capitals
+- Punjab Kings
+- Rajasthan Royals
+- Gujarat Titans
+- Lucknow Super Giants
+- Sunrisers Hyderabad
+
+For team-specific queries, use the team tools like get_team_best_batters, get_team_best_bowlers, or get_team_overall_stats.
+
+Always provide detailed, formatted responses with tables and statistics when available.
+
+{input}
+{agent_scratchpad}"""
 
 # -------------------------------------------------
 # 4️⃣  Streamlit UI
