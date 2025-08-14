@@ -26,11 +26,31 @@ from langchain.callbacks import StreamlitCallbackHandler
 # 1️⃣  Load environment variables & CSV data
 # -------------------------------------------------
 load_dotenv()                     # reads .env (or the GitHub secret)
+
+# Try multiple ways to get the API key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    st.error(
-        "❗️ OpenAI API key not found. Add it to a .env file or as a repository secret."
-    )
+
+# Also check Streamlit secrets
+try:
+    import streamlit as st
+    if hasattr(st, 'secrets') and st.secrets.get("OPENAI_API_KEY"):
+        OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+except:
+    pass
+
+# Debug: Show what we found (without revealing the key)
+if OPENAI_API_KEY:
+    st.success(f"✅ API key found (length: {len(OPENAI_API_KEY)})")
+else:
+    st.error("❗️ OpenAI API key not found. Please add it in Streamlit Cloud Secrets.")
+    st.info("""
+    **How to add your API key:**
+    1. Go to your app's Settings (⚙️)
+    2. Click "Secrets"
+    3. Add: `OPENAI_API_KEY = "sk-your-key-here"`
+    4. Click Save
+    5. Wait 1-2 minutes for redeploy
+    """)
     st.stop()
 
 
