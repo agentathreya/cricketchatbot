@@ -12,14 +12,15 @@ import os
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # -------------------------------------------------
 # ✅  Correct imports for LangChain 0.3.x
 # -------------------------------------------------
-from langchain.agents import AgentType
+from langchain.agents import AgentType, initialize_agent, AgentExecutor
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.tools import StructuredTool
-from langchain_community.llms import Ollama
+from langchain_openai import ChatOpenAI
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
 # -------------------------------------------------
@@ -27,27 +28,26 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 # -------------------------------------------------
 load_dotenv()                     # reads .env (or the GitHub secret)
 
-# Check if Ollama is available
-try:
-    import requests
-    response = requests.get("http://localhost:11434/api/tags", timeout=5)
-    if response.status_code == 200:
-        st.success("✅ Ollama is running locally!")
-    else:
-        st.warning("⚠️ Ollama is not responding. Please start Ollama first.")
-except:
-    st.warning("⚠️ Ollama is not running. Please install and start Ollama.")
+# Check for DeepSeek API key
+load_dotenv()
 
-st.info("""
-**To use this free LLM setup:**
+if 'DEEPSEEK_API_KEY' not in os.environ:
+    st.warning("⚠️ Please set the DEEPSEEK_API_KEY environment variable.")
+    st.info("""
+    **To use DeepSeek API:**
 
-1. **Install Ollama**: Visit https://ollama.ai/ and download
-2. **Start Ollama**: Run `ollama serve` in terminal
-3. **Pull a model**: Run `ollama pull llama2` or `ollama pull mistral`
-4. **Restart this app**: The chatbot will work completely free!
+    1. Get an API key from https://platform.deepseek.com/
+    2. Create a `.env` file in the project root with:
+       ```
+       DEEPSEEK_API_KEY=your_api_key_here
+       ```
+    3. Restart the app
+    
+    The app will use DeepSeek's powerful language model for cricket analytics.
+    """)
+    st.stop()
 
-**Alternative**: If you prefer cloud-based free LLM, we can switch to HuggingFace Inference API (free tier).
-""")
+st.success("✅ DeepSeek API configured successfully!")
 
 
 @st.cache_data(ttl="2h")   # cache the DataFrame for 2 hours – speeds up reloads
@@ -85,11 +85,12 @@ df = load_data("cricket_data.csv")
 # -------------------------------------------------
 # 2️⃣  LLM & custom tool definition (expanded)
 # -------------------------------------------------
-# Initialize Ollama LLM (completely free!)
-llm = Ollama(
-    model="llama2",  # You can change this to "mistral", "codellama", etc.
+# Initialize DeepSeek LLM
+llm = ChatOpenAI(
+    model="deepseek-chat",  # Using DeepSeek's chat model
     temperature=0,
-    base_url="http://localhost:11434",
+    openai_api_key=os.environ["DEEPSEEK_API_KEY"],
+    openai_api_base="https://api.deepseek.com/v1"
 )
 
 # ------------------------------------------------------------------
