@@ -51,7 +51,7 @@ A comprehensive cricket analytics chatbot powered by LangChain and OpenAI that c
 3. **Set up environment variables**
    Create a `.env` file in the root directory:
    ```env
-   OPENAI_API_KEY=your_openai_api_key_here
+   DEEPSEEK_API_KEY=your_deepseek_api_key_here
    ```
 
 4. **Run the application**
@@ -186,10 +186,10 @@ The chatbot features a modern, intuitive interface with:
 ## 🔧 Configuration
 
 ### Environment Variables
-- `OPENAI_API_KEY`: Your OpenAI API key (required)
+- `DEEPSEEK_API_KEY`: Your DeepSeek API key (required)
 
 ### Model Configuration
-- **Default Model**: GPT-4-0125-preview
+- **Default Model**: deepseek-chat
 - **Temperature**: 0 (for consistent responses)
 - **Streaming**: Enabled for better UX
 
@@ -229,7 +229,7 @@ This project is licensed under the MIT License.
 
 - **IPL 2025 Data**: Comprehensive ball-by-ball cricket data
 - **LangChain**: Framework for building LLM applications
-- **OpenAI**: GPT-4 language model
+- **DeepSeek**: DeepSeek language model
 - **Streamlit**: Web application framework
 - **Pandas**: Data manipulation library
 

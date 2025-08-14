@@ -9,7 +9,7 @@ python-dotenv>=1.0.0
 
 # LangChain (core + OpenAI provider) – latest stable versions
 langchain>=0.1.0
-langchain-openai>=0.1.0
+langchain-deepseek>=0.1.0
 langchain-experimental>=0.1.0
 
 # (optional) pretty‑printing of markdown tables in the logs

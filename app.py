@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from langchain.agents import AgentType
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.tools import StructuredTool
-from langchain_openai import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
 # -------------------------------------------------
@@ -28,28 +28,34 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 load_dotenv()                     # reads .env (or the GitHub secret)
 
 # Try multiple ways to get the API key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
 # Also check Streamlit secrets
 try:
     import streamlit as st
-    if hasattr(st, 'secrets') and st.secrets.get("OPENAI_API_KEY"):
-        OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+    if hasattr(st, 'secrets') and st.secrets.get("DEEPSEEK_API_KEY"):
+        DEEPSEEK_API_KEY = st.secrets["DEEPSEEK_API_KEY"]
 except:
     pass
 
 # Debug: Show what we found (without revealing the key)
-if OPENAI_API_KEY:
-    st.success(f"✅ API key found (length: {len(OPENAI_API_KEY)})")
+if DEEPSEEK_API_KEY:
+    st.success(f"✅ DeepSeek API key found (length: {len(DEEPSEEK_API_KEY)})")
 else:
-    st.error("❗️ OpenAI API key not found. Please add it in Streamlit Cloud Secrets.")
+    st.error("❗️ DeepSeek API key not found. Please add it in Streamlit Cloud Secrets.")
     st.info("""
-    **How to add your API key:**
+    **How to add your DeepSeek API key:**
     1. Go to your app's Settings (⚙️)
     2. Click "Secrets"
-    3. Add: `OPENAI_API_KEY = "sk-your-key-here"`
+    3. Add: `DEEPSEEK_API_KEY = "sk-your-deepseek-key-here"`
     4. Click Save
     5. Wait 1-2 minutes for redeploy
+    
+    **Get your DeepSeek API key:**
+    1. Visit: https://platform.deepseek.com/
+    2. Sign up/Login
+    3. Go to API Keys section
+    4. Create a new API key
     """)
     st.stop()
 
@@ -89,10 +95,10 @@ df = load_data("cricket_data.csv")
 # -------------------------------------------------
 # 2️⃣  LLM & custom tool definition (expanded)
 # -------------------------------------------------
-llm = ChatOpenAI(
+llm = ChatDeepSeek(
     temperature=0,
-    model="gpt-4-0125-preview",   # switch to gpt-3.5-turbo-0125 to save money
-    openai_api_key=OPENAI_API_KEY,
+    model="deepseek-chat",   # DeepSeek's main model
+    deepseek_api_key=DEEPSEEK_API_KEY,
     streaming=True,
 )
 
