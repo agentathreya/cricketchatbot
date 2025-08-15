@@ -1,0 +1,31 @@
+name: Deploy to Streamlit Cloud
+
+on:
+  push:
+    branches: [ Main ]
+  pull_request:
+    branches: [ Main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Deploy to Streamlit Cloud
+        env:
+          STREAMLIT_CLOUD_TOKEN: ${{ secrets.STREAMLIT_CLOUD_TOKEN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          pip install streamlit
+          curl -sL https://releases.heroku.com/heroku-cli/channels/stable/heroku-cli-linux-x64.tar.gz | tar xz
+          ./heroku-cli/bin/heroku --version
+          echo $STREAMLIT_CLOUD_TOKEN | streamlit config set server.headless true --global
+          streamlit run app.py

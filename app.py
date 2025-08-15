@@ -26,20 +26,28 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 # -------------------------------------------------
 load_dotenv()                     # reads .env (or the GitHub secret)
 
-# Check for Groq API key
+# Load environment variables
 load_dotenv()
 
-if 'GROQ_API_KEY' not in os.environ:
-    st.warning("⚠️ Please set the GROQ_API_KEY environment variable.")
+# Check for Groq API key in environment variables or GitHub secrets
+groq_api_key = os.environ.get('GROQ_API_KEY')
+
+if not groq_api_key:
+    st.warning("⚠️ GROQ_API_KEY not found in environment variables.")
     st.info("""
     **To use Groq API (FREE & FAST!):**
 
+    For local development:
     1. Get a FREE API key from https://console.groq.com/
     2. Create a `.env` file in the project root with:
        ```
        GROQ_API_KEY=your_api_key_here
        ```
     3. Restart the app
+    
+    For deployment:
+    1. Add GROQ_API_KEY as a repository secret in your GitHub repository
+    2. The GitHub Actions workflow will automatically use it
     
     **Benefits of Groq:**
     - 🚀 Ultra-fast inference (fastest in market)
@@ -48,6 +56,9 @@ if 'GROQ_API_KEY' not in os.environ:
     - 🤖 Access to Llama 3.1 70B, Mixtral 8x7B, Gemma models
     """)
     st.stop()
+
+# Set the API key for Groq
+os.environ['GROQ_API_KEY'] = groq_api_key
 
 st.success("✅ Groq API configured successfully! 🚀")
 
