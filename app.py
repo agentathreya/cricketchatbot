@@ -178,49 +178,101 @@ except ImportError as e:
     st.stop()
 
 # ===================================================================
-# 🔧 TOOL CREATION
+# 🔧 TOOL CREATION - Fixed for Agent Compatibility
 # ===================================================================
 
+def create_wrapper_functions():
+    """Create wrapper functions that work with LangChain agents"""
+    
+    def get_runs_wrapper():
+        """Get top run scorers"""
+        return safe_function_call(get_most_runs, df)
+    
+    def get_wickets_wrapper():
+        """Get top wicket takers"""
+        return safe_function_call(get_most_wickets, df)
+    
+    def get_boundaries_wrapper():
+        """Get players with most fours and sixes"""
+        return safe_function_call(get_most_fours_and_sixes, df)
+    
+    def get_team_runs_wrapper():
+        """Get total runs by team"""
+        return safe_function_call(team_total_runs, df)
+    
+    def get_team_rates_wrapper():
+        """Get run rates by team"""
+        return safe_function_call(team_run_rate, df)
+    
+    def get_powerplay_wrapper():
+        """Get powerplay statistics"""
+        return safe_function_call(get_powerplay_stats, df)
+    
+    def get_middle_overs_wrapper():
+        """Get middle overs statistics"""
+        return safe_function_call(get_middle_overs_stats, df)
+    
+    def get_death_overs_wrapper():
+        """Get death overs statistics"""
+        return safe_function_call(get_death_overs_stats, df)
+    
+    def get_fielding_wrapper():
+        """Get fielding statistics"""
+        return safe_function_call(get_fielding_stats, df)
+    
+    def get_partnerships_wrapper():
+        """Get best partnerships"""
+        return safe_function_call(get_best_partnerships, df)
+    
+    def get_venues_wrapper():
+        """Get venue statistics"""
+        return safe_function_call(get_venue_stats, df)
+    
+    return {
+        "get_most_runs": get_runs_wrapper,
+        "get_most_wickets": get_wickets_wrapper, 
+        "get_most_boundaries": get_boundaries_wrapper,
+        "team_total_runs": get_team_runs_wrapper,
+        "team_run_rates": get_team_rates_wrapper,
+        "powerplay_stats": get_powerplay_wrapper,
+        "middle_overs_stats": get_middle_overs_wrapper,
+        "death_overs_stats": get_death_overs_wrapper,
+        "fielding_stats": get_fielding_wrapper,
+        "best_partnerships": get_partnerships_wrapper,
+        "venue_stats": get_venues_wrapper
+    }
+
 def create_tools():
-    """Create LangChain tools with error handling"""
+    """Create LangChain tools with proper function wrapping"""
+    wrapper_functions = create_wrapper_functions()
     tools = []
     
-    # Basic statistics tools
-    basic_tools = [
-        ("get_most_runs", lambda: safe_function_call(get_most_runs, df), "Get top run scorers"),
-        ("get_most_wickets", lambda: safe_function_call(get_most_wickets, df), "Get top wicket takers"),
-        ("get_most_boundaries", lambda: safe_function_call(get_most_fours_and_sixes, df), "Get players with most fours and sixes"),
+    tool_definitions = [
+        ("get_most_runs", "Get the top run scorers in IPL 2025"),
+        ("get_most_wickets", "Get the top wicket takers in IPL 2025"),
+        ("get_most_boundaries", "Get players with most fours and sixes"),
+        ("team_total_runs", "Get total runs scored by each team"),
+        ("team_run_rates", "Get run rates for each team"),
+        ("powerplay_stats", "Get powerplay (overs 1-6) statistics"),
+        ("middle_overs_stats", "Get middle overs (7-15) statistics"), 
+        ("death_overs_stats", "Get death overs (16-20) statistics"),
+        ("fielding_stats", "Get fielding statistics including catches and run-outs"),
+        ("best_partnerships", "Get the best batting partnerships"),
+        ("venue_stats", "Get statistics by venue")
     ]
     
-    # Team analysis tools
-    team_tools = [
-        ("team_total_runs", lambda: safe_function_call(team_total_runs, df), "Get total runs by team"),
-        ("team_run_rate", lambda: safe_function_call(team_run_rate, df), "Get run rates by team"),
-        ("powerplay_stats", lambda: safe_function_call(get_powerplay_stats, df), "Get powerplay statistics"),
-        ("middle_overs_stats", lambda: safe_function_call(get_middle_overs_stats, df), "Get middle overs statistics"),
-        ("death_overs_stats", lambda: safe_function_call(get_death_overs_stats, df), "Get death overs statistics"),
-    ]
-    
-    # Advanced analysis tools
-    advanced_tools = [
-        ("fielding_stats", lambda: safe_function_call(get_fielding_stats, df), "Get fielding statistics"),
-        ("best_partnerships", lambda: safe_function_call(get_best_partnerships, df), "Get best partnerships"),
-        ("venue_stats", lambda: safe_function_call(get_venue_stats, df), "Get venue statistics"),
-    ]
-    
-    # Create StructuredTool objects
-    all_tools = basic_tools + team_tools + advanced_tools
-    
-    for name, func, description in all_tools:
+    for name, description in tool_definitions:
         try:
-            tool = StructuredTool.from_function(
-                func=func,
-                name=name,
-                description=description
-            )
-            tools.append(tool)
+            if name in wrapper_functions:
+                tool = StructuredTool.from_function(
+                    func=wrapper_functions[name],
+                    name=name,
+                    description=description
+                )
+                tools.append(tool)
+                print(f"✅ Created tool: {name}")
         except Exception as e:
-            st.warning(f"Could not create tool {name}: {e}")
+            print(f"⚠️  Could not create tool {name}: {e}")
             continue
     
     return tools
@@ -235,18 +287,39 @@ st.success(f"✅ Created {len(tools)} analysis tools")
 def create_agent():
     """Create LangChain agent with error handling"""
     try:
-        agent = initialize_agent(
-            tools=tools,
-            llm=llm,
-            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-            verbose=True,
-            handle_parsing_errors=True,
-            max_iterations=5,  # Reduced for faster responses
-            early_stopping_method="generate"
-        )
-        return agent
+        # Try different agent types for better compatibility
+        agent_types = [
+            AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION
+        ]
+        
+        for agent_type in agent_types:
+            try:
+                agent = initialize_agent(
+                    tools=tools,
+                    llm=llm,
+                    agent=agent_type,
+                    verbose=True,
+                    handle_parsing_errors=True,
+                    max_iterations=5,
+                    early_stopping_method="generate"
+                )
+                st.success(f"✅ Created agent with type: {agent_type.value}")
+                return agent
+            except Exception as e:
+                st.warning(f"Agent type {agent_type.value} failed: {str(e)}")
+                continue
+        
+        raise Exception("All agent types failed to initialize")
+        
     except Exception as e:
         st.error(f"Failed to create agent: {str(e)}")
+        st.info("""**Troubleshooting:** 
+        1. Check if all required packages are installed
+        2. Ensure cricket data is loaded properly
+        3. Verify Groq API key is valid
+        """)
         return None
 
 agent = create_agent()
