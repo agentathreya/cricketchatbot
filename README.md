@@ -1,280 +1,230 @@
-# 🏏 IPL 2025 Cricket Analytics Chatbot
+# 🏏 IPL Cricket Analytics Chatbot - Powered by Groq API ⚡
 
-A comprehensive cricket analytics chatbot powered by LangChain and OpenAI that can answer complex queries about IPL 2025 cricket data. This chatbot provides detailed analysis of batting, bowling, fielding, partnerships, and team performance.
+> **Ultra-fast cricket insights with AI - Now 70% cheaper and 10x faster!**
 
-## 🚀 Features
+A comprehensive cricket analytics chatbot powered by **Groq API** and LangChain that provides lightning-fast analysis of IPL 2025 cricket data with advanced batting, bowling, fielding, and team performance insights.
 
-### 🎯 **Simple Queries**
-- Most runs, wickets, fours, and sixes
-- Team statistics and rankings
+## 🔥 **Why Groq API?**
+
+| Feature | Groq | OpenAI GPT-4 | DeepSeek | Claude |
+|---------|------|--------------|----------|---------|
+| **Speed** | ⚡ **10x faster** | 🐌 Slow | 🐌 Medium | 🐌 Medium |
+| **Cost** | 💰 **$0.27/1M tokens** | $10-30/1M | $0.60-2.00/1M | $15-75/1M |
+| **Free Tier** | 🆓 **14,400 req/day** | $5 credit | Limited | Very limited |
+| **Quality** | 🤖 **Llama 3.1 70B** | GPT-4 | Custom | Claude-3 |
+
+## 🚀 **Features**
+
+### 🎯 **Basic Analytics**
+- Top run scorers, wicket takers, boundary hitters
+- Team rankings and statistics
 - Match results and venue analysis
 - Player performance summaries
 
-### 🚀 **Advanced Batting Analysis**
-- Best batters in death overs (16-20) vs pace/spin bowling
-- Performance analysis vs specific bowling types
-- Strike rates and boundary analysis
-- Batting performance in specific overs ranges
-- Performance vs left-handed/right-handed batsmen
+### 📊 **Advanced Analytics**
+- **Death Overs Analysis**: Performance in overs 16-20
+- **Powerplay Stats**: Overs 1-6 analysis
+- **Middle Overs**: Overs 7-15 performance
+- **Phase-wise Comparisons**: Detailed breakdowns
 
-### 🎾 **Advanced Bowling Analysis**
-- Best bowlers in death overs vs RHB/LHB
-- Economy rates in specific overs
-- Wicket-taking analysis by overs
-- Bowling performance vs specific batting hands
-- Phase-wise bowling statistics
+### 🏏 **Specialized Insights**
+- Best batters vs pace/spin bowling
+- Economy rates by bowling type
+- Fielding statistics (catches, run-outs, stumpings)
+- Partnership analysis
+- Strike rate and boundary analysis
 
-### 🏃‍♂️ **Fielding & Partnerships**
-- Catches, run-outs, and stumpings statistics
-- Best batting partnerships
-- Team fielding performance
-- Individual fielder rankings
+## ⚡ **Quick Start**
 
-### 📊 **Phase-wise Analysis**
-- **Powerplay (1-6 overs)**: Batting and bowling statistics
-- **Middle overs (7-15)**: Performance analysis
-- **Death overs (16-20)**: Critical phase statistics
+### **Option 1: Automated Setup (Recommended)**
+```bash
+git clone https://github.com/agentathreya/cricketchatbot.git
+cd cricketchatbot
+python3 setup.py  # Installs everything automatically
+```
 
-## 🛠️ Installation
+### **Option 2: Manual Setup**
+```bash
+# 1. Clone repository
+git clone https://github.com/agentathreya/cricketchatbot.git
+cd cricketchatbot
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd cricket-chatbot
-   ```
+# 2. Install dependencies
+pip install -r requirements.txt
 
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# 3. Get FREE Groq API key
+# Visit: https://console.groq.com/
+# Sign up and copy your API key
 
-3. **Set up Groq API (FREE & FAST!)**
-   - Get a FREE API key from [Groq Console](https://console.groq.com/)
-   - Create a `.env` file in the project root:
-     ```
-     GROQ_API_KEY=your_api_key_here
-     ```
+# 4. Create environment file
+echo "GROQ_API_KEY=your_actual_api_key_here" > .env
 
-3. **Set up Ollama (Free LLM)**
-   ```bash
-   # Run the setup script
-   python setup_ollama.py
-   
-   # Or manually:
-   # 1. Install Ollama: https://ollama.ai/
-   # 2. Start Ollama: ollama serve
-   # 3. Pull a model: ollama pull llama2
-   ```
+# 5. Run the app
+streamlit run app.py
+```
 
-## 🤖 Running the Chatbot
+## 🌐 **Deployment Options**
 
-1. **Start the Streamlit app**
-   ```bash
-   streamlit run app.py
-   ```
-
-2. **Access the web interface**
-   Open your browser and go to `http://localhost:8501`
-
-## ☁️ Deployment
-
-### Streamlit Cloud
-This app can be easily deployed to Streamlit Cloud since it uses the Groq API:
-
+### **🔥 Streamlit Cloud (Easiest)**
 1. Fork this repository
-2. Go to [Streamlit Cloud](https://streamlit.io/cloud)
-3. Click "New app" and select your forked repository
-4. Add your `GROQ_API_KEY` as a secret in the app settings
-5. Deploy!
+2. Go to [streamlit.io/cloud](https://streamlit.io/cloud)
+3. Connect your repo
+4. Add `GROQ_API_KEY` in secrets
+5. Deploy! ✨
 
-## 💰 Why Groq is Amazing?
-
-- **🆓 FREE Tier**: 14,400 requests/day completely free
-- **⚡ Ultra-fast**: Fastest inference in the market
-- **💰 Cheap**: 70% cheaper than OpenAI ($0.27-$0.59 per 1M tokens)
-- **🤖 Top Models**: Access to Llama 3.1 70B, Mixtral 8x7B, Gemma
-- **🔒 No Rate Limits**: In free tier for reasonable usage
-- **📈 Scalable**: Easy to upgrade when needed
-
-## 📊 Dataset Overview
-
-The chatbot uses a comprehensive IPL 2025 dataset with the following key information:
-
-- **17,176 ball-by-ball records**
-- **10 IPL teams** including:
-  - Gujarat Titans
-  - Punjab Kings
-  - Mumbai Indians
-  - Lucknow Super Giants
-  - Royal Challengers Bengaluru
-  - Rajasthan Royals
-  - Delhi Capitals
-  - Kolkata Knight Riders
-  - Chennai Super Kings
-  - Sunrisers Hyderabad
-
-- **282 unique players**
-- **Detailed statistics** including:
-  - Batting performance (runs, strike rate, boundaries)
-  - Bowling performance (wickets, economy, extras)
-  - Fielding statistics (catches, run-outs, stumpings)
-  - Match context (overs, phases, partnerships)
-
-## 💬 Example Queries
-
-### 🎯 Basic Statistics
-```
-"Who has scored the most runs in IPL 2025?"
-"Who has taken the most wickets?"
-"Who has hit the most fours and sixes?"
-"Show me the top strike rates"
+### **🐳 Docker**
+```bash
+docker build -t cricket-chatbot .
+docker run -e GROQ_API_KEY=your_key -p 8501:8501 cricket-chatbot
 ```
 
-### 🚀 Advanced Batting
-```
-"Who are the best batters in death overs vs pace bowling?"
-"Show me best batters vs right-handed batsmen in overs 16-20"
-"Which batters perform best vs spin bowling in middle overs?"
-"Top batters in powerplay with highest strike rates"
-```
+### **🚀 Other Platforms**
+- **Render**: Auto-deploys from GitHub
+- **Railway**: One-click deployment
+- **Heroku**: Uses included Procfile
+- **Google Cloud Run**: Serverless deployment
 
-### 🎾 Advanced Bowling
-```
-"Who are the best bowlers in death overs vs right-handed batsmen?"
-"Show me bowlers with best economy rates in overs 16-20"
-"Best bowlers vs left-handed batsmen in powerplay"
-"Which bowlers take most wickets in middle overs?"
-```
+## 📊 **Dataset**
 
-### 📊 Team Analysis
-```
-"What are the team run rates in IPL 2025?"
-"Show me powerplay statistics for all teams"
-"Which team has the best death overs performance?"
-"Team batting and bowling rankings"
-```
+- **17,176 ball-by-ball records** from IPL 2025
+- **10 IPL teams** with complete rosters
+- **282 unique players** with detailed stats
+- **Comprehensive metrics**: Batting, bowling, fielding, partnerships
 
-### 🏃‍♂️ Fielding & Partnerships
+## 💬 **Example Queries**
+
 ```
-"Show me the best fielders with most catches and run-outs"
-"What are the best batting partnerships in IPL 2025?"
+"Who are the top run scorers in IPL 2025?"
+"Show me death overs bowling statistics"
+"Which team has the best powerplay performance?"
+"Best batting partnerships in the tournament"
+"Economy rates for spinners vs pace bowlers"
 "Fielding statistics by team"
-"Partnership analysis by overs"
 ```
 
-### 📈 Phase-wise Analysis
+## 🛠️ **Technical Stack**
+
+- **Frontend**: Streamlit with modern chat interface
+- **AI Engine**: Groq API with Llama 3.1 70B
+- **Framework**: LangChain for structured analysis
+- **Data Processing**: Pandas for cricket analytics
+- **Deployment**: Multi-platform support
+
+## 📈 **Performance Optimization**
+
+### **Model Selection**
+```python
+# For speed (ultra-fast responses)
+model_name="llama3-8b-8192"
+
+# For quality (current default)
+model_name="llama3-70b-8192" 
+
+# For complex reasoning
+model_name="mixtral-8x7b-32768"
 ```
-"Show me powerplay statistics for all teams"
-"Middle overs batting and bowling performance"
-"Death overs analysis - best performers"
-"Phase-wise team rankings"
+
+### **Cost Optimization**
+- FREE tier: 14,400 requests/day
+- Paid tier: Only $0.27-$0.59 per 1M tokens
+- Built-in caching for repeated queries
+- Optimized prompts for efficiency
+
+## 🔧 **Configuration**
+
+### **Environment Variables**
+```bash
+GROQ_API_KEY=your_groq_api_key  # Required
 ```
 
-## 🛠️ Technical Architecture
+### **Model Configuration**
+```python
+# In app.py - customize as needed
+llm = ChatGroq(
+    groq_api_key=api_key,
+    model_name="llama3-70b-8192",  # Change model here
+    temperature=0,                 # Deterministic responses
+    max_retries=3,
+    timeout=60
+)
+```
 
-### Core Components
+## 🐛 **Troubleshooting**
 
-1. **LangChain Agent**: Uses structured tools for reliable data analysis
-2. **OpenAI GPT-4**: Powers natural language understanding and response generation
-3. **Pandas DataFrame**: Handles data manipulation and aggregation
-4. **Streamlit**: Provides the web interface
+### **Common Issues**
 
-### Key Functions
+**1. "GROQ_API_KEY not found"**
+```bash
+# Solution:
+echo "GROQ_API_KEY=your_key_here" > .env
+```
 
-The chatbot includes 25+ specialized functions for cricket analysis:
+**2. "Module not found: langchain_groq"**
+```bash
+# Solution:
+pip install -r requirements.txt
+```
 
-#### Basic Statistics
-- `get_most_runs()`: Top run scorers
-- `get_most_wickets()`: Top wicket takers
-- `get_most_fours_and_sixes()`: Boundary statistics
+**3. "Cricket data not found"**
+```bash
+# Ensure cricket_data.csv is in project root
+ls -la cricket_data.csv
+```
 
-#### Advanced Batting
-- `best_batters_death_overs()`: Death overs batting analysis
-- `best_batters_vs_batting_hand()`: Performance vs batting hand
-- `runs_by_overs_and_style()`: Overs-specific batting analysis
+**4. Slow responses**
+```bash
+# Switch to faster model in app.py:
+model_name="llama3-8b-8192"
+```
 
-#### Advanced Bowling
-- `best_bowlers_death_overs()`: Death overs bowling analysis
-- `best_bowlers_vs_batting_hand()`: Bowling vs batting hand
-- `bowler_economy()`: Economy rate analysis
+## 📊 **Usage Statistics**
 
-#### Fielding & Partnerships
-- `get_fielding_stats()`: Comprehensive fielding statistics
-- `get_best_partnerships()`: Partnership analysis
+Perfect for:
+- **Cricket Analytics Teams**: Professional insights
+- **Fantasy Sports**: Player performance analysis  
+- **Sports Journalists**: Quick statistics and trends
+- **Cricket Enthusiasts**: Deep-dive analysis
+- **Developers**: Learning LangChain + Groq integration
 
-#### Team Analysis
-- `team_total_runs()`: Team batting statistics
-- `team_run_rate()`: Team run rates
-- `get_powerplay_stats()`: Powerplay analysis
-- `get_middle_overs_stats()`: Middle overs analysis
-- `get_death_overs_stats()`: Death overs analysis
-
-## 🎨 User Interface
-
-The chatbot features a modern, intuitive interface with:
-
-- **Chat-based interaction**: Natural conversation flow
-- **Example queries sidebar**: Quick access to common questions
-- **Streaming responses**: Real-time answer generation
-- **Markdown formatting**: Rich text responses with tables
-- **Error handling**: Graceful error management
-- **Mobile responsive**: Works on all devices
-
-## 🔧 Configuration
-
-### Free LLM Setup
-- **Ollama**: Completely free local LLM inference
-- **Default Model**: llama2 (can be changed to mistral, codellama, etc.)
-- **Temperature**: 0 (for consistent responses)
-- **No API Keys Required**: Runs entirely locally
-
-### Data Processing
-- **Caching**: 2-hour cache for improved performance
-- **Data Cleaning**: Automatic handling of missing values
-- **Type Conversion**: Proper data type handling
-
-## 🚀 Usage Tips
-
-1. **Be Specific**: Ask detailed questions for better results
-   - ✅ "Best batters in death overs vs pace bowling"
-   - ❌ "Who is the best batter?"
-
-2. **Use Cricket Terminology**: The chatbot understands cricket terms
-   - "death overs", "powerplay", "strike rate", "economy rate"
-
-3. **Specify Overs**: Mention specific overs for detailed analysis
-   - "overs 16-20", "powerplay", "middle overs"
-
-4. **Compare Players/Teams**: Ask for comparisons
-   - "Compare batting performance of top 5 run scorers"
-
-## 🤝 Contributing
+## 🤝 **Contributing**
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature-name`
+3. Make changes and test locally
+4. Submit a pull request
 
-## 📝 License
+## 📝 **License**
 
-This project is licensed under the MIT License.
+MIT License - see LICENSE file for details
 
-## 🙏 Acknowledgments
+## 🙏 **Acknowledgments**
 
-- **IPL 2025 Data**: Comprehensive ball-by-ball cricket data
-- **LangChain**: Framework for building LLM applications
-- **Ollama**: Free local LLM inference
-- **Streamlit**: Web application framework
-- **Pandas**: Data manipulation library
+- **Groq**: Ultra-fast AI inference platform
+- **LangChain**: AI application framework
+- **Streamlit**: Web app framework
+- **IPL**: Cricket data source
 
-## 📞 Support
+## 🆘 **Support**
 
-For questions or issues:
-1. Check the example queries in the sidebar
-2. Review the documentation above
-3. Open an issue on GitHub
+- **Issues**: Open a GitHub issue
+- **Discussions**: Use GitHub Discussions
+- **Email**: [Your contact if available]
+
+## 🔗 **Links**
+
+- **Live Demo**: [Your deployed app URL]
+- **Groq Console**: https://console.groq.com/
+- **Documentation**: This README
+- **Source Code**: https://github.com/agentathreya/cricketchatbot
 
 ---
 
-**🏏 Ask me anything about IPL 2025 cricket!** 🏏
+<div align="center">
+
+### 🏏 **Ready for lightning-fast cricket analytics?** ⚡
+
+**Get your FREE Groq API key and deploy in under 5 minutes!**
+
+[🚀 **Deploy Now**](https://streamlit.io/cloud) | [📊 **View Demo**](your-demo-url) | [⭐ **Star Repo**](https://github.com/agentathreya/cricketchatbot)
+
+</div>
