@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from langchain.agents import AgentType, initialize_agent, AgentExecutor
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.tools import StructuredTool
+from langchain.agents.agent import AgentExecutor
 from langchain_groq import ChatGroq
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
@@ -371,16 +372,18 @@ tools.extend([
 ])
 
 # -------------------------------------------------
-# 3️⃣  Create the agent
+# 3️⃣  Create the agent with better DataFrame handling
 # -------------------------------------------------
-# Initialize the agent with our custom tools
-agent = initialize_agent(
+# Create a custom agent executor to handle pandas DataFrames better
+agent = AgentExecutor.from_agent_and_tools(
     tools=tools,
     llm=llm,
     agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
     handle_parsing_errors=True,
-    max_iterations=10
+    max_iterations=10,
+    return_intermediate_steps=True,
+    early_stopping_method="generate"
 )
 
 # Set a better system prompt for the agent
