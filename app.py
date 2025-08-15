@@ -12,15 +12,13 @@ import os
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-from openai import OpenAI
-
 # -------------------------------------------------
-# ✅  Correct imports for LangChain 0.3.x
+# ✅  Correct imports for LangChain with Groq
 # -------------------------------------------------
 from langchain.agents import AgentType, initialize_agent, AgentExecutor
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain.tools import StructuredTool
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
 # -------------------------------------------------
@@ -28,26 +26,30 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 # -------------------------------------------------
 load_dotenv()                     # reads .env (or the GitHub secret)
 
-# Check for DeepSeek API key
+# Check for Groq API key
 load_dotenv()
 
-if 'DEEPSEEK_API_KEY' not in os.environ:
-    st.warning("⚠️ Please set the DEEPSEEK_API_KEY environment variable.")
+if 'GROQ_API_KEY' not in os.environ:
+    st.warning("⚠️ Please set the GROQ_API_KEY environment variable.")
     st.info("""
-    **To use DeepSeek API:**
+    **To use Groq API (FREE & FAST!):**
 
-    1. Get an API key from https://platform.deepseek.com/
+    1. Get a FREE API key from https://console.groq.com/
     2. Create a `.env` file in the project root with:
        ```
-       DEEPSEEK_API_KEY=your_api_key_here
+       GROQ_API_KEY=your_api_key_here
        ```
     3. Restart the app
     
-    The app will use DeepSeek's powerful language model for cricket analytics.
+    **Benefits of Groq:**
+    - 🚀 Ultra-fast inference (fastest in market)
+    - 💰 FREE tier: 14,400 requests/day
+    - 📊 Paid tier: $0.27-$0.59 per 1M tokens (70% cheaper than OpenAI)
+    - 🤖 Access to Llama 3.1 70B, Mixtral 8x7B, Gemma models
     """)
     st.stop()
 
-st.success("✅ DeepSeek API configured successfully!")
+st.success("✅ Groq API configured successfully! 🚀")
 
 
 @st.cache_data(ttl="2h")   # cache the DataFrame for 2 hours – speeds up reloads
@@ -85,12 +87,17 @@ df = load_data("cricket_data.csv")
 # -------------------------------------------------
 # 2️⃣  LLM & custom tool definition (expanded)
 # -------------------------------------------------
-# Initialize DeepSeek LLM
-llm = ChatOpenAI(
-    model="deepseek-chat",  # Using DeepSeek's chat model
-    temperature=0,
-    openai_api_key=os.environ["DEEPSEEK_API_KEY"],
-    openai_api_base="https://api.deepseek.com/v1"
+# Initialize Groq LLM (Fast & Cheap!)
+llm = ChatGroq(
+    groq_api_key=os.environ["GROQ_API_KEY"],
+    model_name="llama3-70b-8192",  # Best performance model
+    temperature=0,  # Deterministic responses
+    max_retries=3,
+    timeout=30,
+    # Optional: Use different models based on need
+    # "llama3-8b-8192" for faster responses
+    # "mixtral-8x7b-32768" for complex reasoning  
+    # "gemma-7b-it" for lightweight tasks
 )
 
 # ------------------------------------------------------------------
@@ -355,19 +362,15 @@ tools.extend([
 # -------------------------------------------------
 # 3️⃣  Create the agent
 # -------------------------------------------------
-agent = create_pandas_dataframe_agent(
+# Initialize the agent with our custom tools
+agent = initialize_agent(
+    tools=tools,
     llm=llm,
-    df=df,
-    agent_type="zero-shot-react-description",
+    agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
-    allow_dangerous_code=True,  # Required for pandas agent functionality
+    handle_parsing_errors=True,
+    max_iterations=10
 )
-
-# Add our custom tools to the agent
-if hasattr(agent, 'tools'):
-    agent.tools.extend(tools)
-else:
-    agent.tools = tools
 
 # Set a better system prompt for the agent
 if hasattr(agent, 'agent') and hasattr(agent.agent, 'llm_chain'):
@@ -550,7 +553,8 @@ with st.sidebar:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666;'>
-    <p>🏏 IPL 2025 Cricket Analytics Chatbot | Powered by LangChain & OpenAI</p>
+    <p>🏏 IPL 2025 Cricket Analytics Chatbot | Powered by LangChain & Groq 🚀</p>
     <p>Ask me anything about batting, bowling, fielding, partnerships, and team performance!</p>
+    <p style='font-size: 12px; color: #999;'>💰 Ultra-fast inference • FREE tier available • 70% cheaper than alternatives</p>
 </div>
 """, unsafe_allow_html=True)

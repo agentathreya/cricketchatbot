@@ -48,11 +48,11 @@ A comprehensive cricket analytics chatbot powered by LangChain and OpenAI that c
    pip install -r requirements.txt
    ```
 
-3. **Set up DeepSeek API**
-   - Get an API key from [DeepSeek Platform](https://platform.deepseek.com/)
+3. **Set up Groq API (FREE & FAST!)**
+   - Get a FREE API key from [Groq Console](https://console.groq.com/)
    - Create a `.env` file in the project root:
      ```
-     DEEPSEEK_API_KEY=your_api_key_here
+     GROQ_API_KEY=your_api_key_here
      ```
 
 3. **Set up Ollama (Free LLM)**
@@ -79,20 +79,22 @@ A comprehensive cricket analytics chatbot powered by LangChain and OpenAI that c
 ## ☁️ Deployment
 
 ### Streamlit Cloud
-This app can be easily deployed to Streamlit Cloud since it uses the DeepSeek API:
+This app can be easily deployed to Streamlit Cloud since it uses the Groq API:
 
 1. Fork this repository
 2. Go to [Streamlit Cloud](https://streamlit.io/cloud)
 3. Click "New app" and select your forked repository
-4. Add your `DEEPSEEK_API_KEY` as a secret in the app settings
+4. Add your `GROQ_API_KEY` as a secret in the app settings
 5. Deploy!
 
-## 💰 Why Free?
+## 💰 Why Groq is Amazing?
 
-- **No API costs**: Runs completely locally
-- **No rate limits**: Use as much as you want
-- **Privacy**: All data stays on your machine
-- **Offline**: Works without internet after setup
+- **🆓 FREE Tier**: 14,400 requests/day completely free
+- **⚡ Ultra-fast**: Fastest inference in the market
+- **💰 Cheap**: 70% cheaper than OpenAI ($0.27-$0.59 per 1M tokens)
+- **🤖 Top Models**: Access to Llama 3.1 70B, Mixtral 8x7B, Gemma
+- **🔒 No Rate Limits**: In free tier for reasonable usage
+- **📈 Scalable**: Easy to upgrade when needed
 
 ## 📊 Dataset Overview
 
