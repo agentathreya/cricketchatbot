@@ -366,7 +366,106 @@ st.markdown("""
 """)
 
 # ===================================================================
-# 🧠 STRUCTURED REASONING SYSTEM
+# 📚 DATASET KNOWLEDGE SYSTEM
+# ===================================================================
+
+# Comprehensive understanding of the IPL 2025 dataset based on analysis
+DATASET_KNOWLEDGE = {
+    "structure": {
+        "total_records": "17,176 ball-by-ball records",
+        "match_format": "T20 format (20 overs per innings)",
+        "season": "IPL 2025",
+        "data_type": "Ball-by-ball detailed match data"
+    },
+    "teams": [
+        "Kolkata Knight Riders", "Royal Challengers Bengaluru", 
+        "Chennai Super Kings", "Mumbai Indians", "Delhi Capitals",
+        "Sunrisers Hyderabad", "Rajasthan Royals", "Punjab Kings",
+        "Lucknow Super Giants", "Gujarat Titans"
+    ],
+    "key_players": {
+        "batters": ["V Kohli", "PD Salt", "AM Rahane", "SP Narine", "Q de Kock", "VR Iyer", 
+                   "A Raghuvanshi", "AD Russell", "Ramandeep Singh", "RK Singh"],
+        "bowlers": ["JR Hazlewood", "Yash Dayal", "KH Pandya", "Rasikh Salam", "Suyash Sharma",
+                   "CV Varun", "SH Johnson", "Harshit Rana", "LS Livingstone", "VG Arora"]
+    },
+    "venues": ["Eden Gardens, Kolkata"],  # From the sample data
+    "statistics_available": {
+        "batting": ["runs_total", "runs_batter", "balls_faced", "isFour", "isSix", "curr_batter_runs", "curr_batter_balls"],
+        "bowling": ["bowler_runs", "bowler_wicket", "bowling_style", "bowling_type", "isWicket", "dismissal_type"],
+        "team": ["team_runs", "team_balls", "team_wickets", "Current RR", "Required RR", "winProbabilty"],
+        "match": ["over", "ball", "innings", "predictedScore", "batting_partners", "venue", "date"],
+        "detailed": ["wagonX", "wagonY", "wagonZone", "pitchLine", "pitchLength", "shotType", "shotControl"]
+    },
+    "match_phases": {
+        "powerplay": "Overs 1-6",
+        "middle_overs": "Overs 7-15", 
+        "death_overs": "Overs 16-20"
+    },
+    "shot_types": ["CUT_SHOT", "PULL", "FLICK", "ON_DRIVE", "COVER_DRIVE", "STRAIGHT_DRIVE", 
+                   "SLOG_SHOT", "SWEEP_SHOT", "REVERSE_SWEEP", "SQUARE_DRIVE", "LEG_GLANCE"],
+    "bowling_styles": ["rfm", "lmf", "rm", "sla", "lbg", "lf", "rf", "ob"],
+    "dismissal_types": ["caught", "bowled"],
+    "pitch_locations": ["ON_THE_STUMPS", "OUTSIDE_OFFSTUMP", "DOWN_LEG", "WIDE_OUTSIDE_OFFSTUMP"],
+    "ball_lengths": ["FULL", "GOOD_LENGTH", "SHORT_OF_A_GOOD_LENGTH", "SHORT", "YORKER", "FULL_TOSS"]
+}
+
+def get_dataset_context():
+    """Generate context about what's available in the dataset"""
+    return f"""
+    📊 **IPL 2025 Dataset Overview:**
+    - **Records**: {DATASET_KNOWLEDGE['structure']['total_records']}
+    - **Teams**: {len(DATASET_KNOWLEDGE['teams'])} IPL teams
+    - **Format**: {DATASET_KNOWLEDGE['structure']['match_format']}
+    - **Data Type**: {DATASET_KNOWLEDGE['structure']['data_type']}
+    
+    🏏 **Available Statistics:**
+    • Batting: Runs, balls faced, boundaries (4s/6s), strike rates
+    • Bowling: Wickets, economy rates, bowling styles, dismissals
+    • Team: Run rates, win probabilities, partnerships
+    • Match Phases: Powerplay, middle overs, death overs analysis
+    • Advanced: Shot analysis, pitch maps, wagon wheels
+    
+    🎯 **Key Features:**
+    • Ball-by-ball tracking with exact over/ball details
+    • Shot type and control analysis
+    • Bowling line/length data
+    • Real-time win probability tracking
+    • Partnership and batting position tracking
+    """
+
+def validate_query_against_dataset(query: str) -> dict:
+    """Check if a query can be answered with available data"""
+    query_lower = query.lower()
+    
+    # Check for team names
+    mentioned_teams = [team for team in DATASET_KNOWLEDGE['teams'] if team.lower() in query_lower]
+    
+    # Check for player names
+    mentioned_players = []
+    for category in DATASET_KNOWLEDGE['key_players'].values():
+        mentioned_players.extend([player for player in category if player.lower() in query_lower])
+    
+    # Check for statistical categories
+    stat_categories = []
+    if any(word in query_lower for word in ['run', 'score', 'batting']):
+        stat_categories.append('batting')
+    if any(word in query_lower for word in ['wicket', 'bowl', 'economy']):
+        stat_categories.append('bowling')
+    if any(word in query_lower for word in ['team', 'total']):
+        stat_categories.append('team')
+    if any(word in query_lower for word in ['powerplay', 'death', 'middle']):
+        stat_categories.append('match_phases')
+    
+    return {
+        'teams': mentioned_teams,
+        'players': mentioned_players,
+        'stat_categories': stat_categories,
+        'is_answerable': len(mentioned_teams) > 0 or len(mentioned_players) > 0 or len(stat_categories) > 0
+    }
+
+# ===================================================================
+# 🧠 ENHANCED STRUCTURED REASONING SYSTEM
 # ===================================================================
 
 def analyze_query_step_by_step(user_query: str):
@@ -377,23 +476,47 @@ def analyze_query_step_by_step(user_query: str):
     if not reasoning_llm:
         return None, "Failed to initialize reasoning system"
     
-    # Step 1: 🎯 UNDERSTAND the query
+    # Pre-analysis: Validate query against dataset
+    query_validation = validate_query_against_dataset(user_query)
+    dataset_context = get_dataset_context()
+    
+    # Step 1: 🎯 UNDERSTAND the query (Dataset-aware)
     with st.expander("🎯 **Step 1: Understanding Your Question**", expanded=True):
-        st.write("Analyzing what you want to know...")
+        st.write("Analyzing what you want to know using dataset knowledge...")
+        
+        # Show validation results
+        if query_validation['teams']:
+            st.success(f"🏆 Teams found: {', '.join(query_validation['teams'])}")
+        if query_validation['players']:
+            st.success(f"👨‍💻 Players found: {', '.join(query_validation['players'])}")
+        if query_validation['stat_categories']:
+            st.success(f"📊 Stats categories: {', '.join(query_validation['stat_categories'])}")
+        
+        if not query_validation['is_answerable']:
+            st.warning("⚠️ Query might not match available data. Suggesting alternatives...")
         
         understand_prompt = f"""
-        You are a cricket analytics expert. Analyze this user question and extract:
-        1. What type of cricket information they want (batting, bowling, team stats, etc.)
-        2. Any specific players, teams, or time periods mentioned
-        3. The level of detail needed (simple stats vs deep analysis)
+        You are a cricket analytics expert with deep knowledge of the IPL 2025 dataset.
         
-        User Question: "{user_query}"
+        DATASET CONTEXT:
+        {dataset_context}
+        
+        QUERY VALIDATION:
+        - Teams mentioned: {query_validation['teams']}
+        - Players mentioned: {query_validation['players']}
+        - Statistical categories: {query_validation['stat_categories']}
+        - Can be answered: {query_validation['is_answerable']}
+        
+        Analyze this user question:
+        "{user_query}"
         
         Respond in this format:
         **Query Type:** [batting/bowling/team/fielding/partnership/venue analysis]
-        **Entities:** [any specific players, teams, overs mentioned]
+        **Entities Found:** [specific players/teams identified from dataset]
+        **Available Data:** [confirm what data we have to answer this]
         **Analysis Level:** [basic stats/advanced analysis/comparison]
         **Intent:** [brief summary of what user wants to know]
+        **Feasibility:** [HIGH/MEDIUM/LOW - how well we can answer this]
         """
         
         try:
@@ -582,15 +705,34 @@ if prompt := st.chat_input("Ask about IPL cricket stats..."):
             if response:
                 st.session_state.messages.append({"role": "assistant", "content": response})
         else:
-            # Use standard agent approach
-            with st.spinner("Analyzing cricket data..."):
+            # Use enhanced standard agent approach with dataset awareness
+            query_validation = validate_query_against_dataset(prompt)
+            
+            # Show quick validation results
+            if query_validation['teams'] or query_validation['players']:
+                entities = query_validation['teams'] + query_validation['players']
+                st.info(f"🎯 Found entities: {', '.join(entities[:3])}{'...' if len(entities) > 3 else ''}")
+            
+            if not query_validation['is_answerable']:
+                st.warning("⚠️ This query might not match our dataset. I'll do my best to provide relevant information.")
+            
+            with st.spinner("Analyzing cricket data with dataset intelligence..."):
                 try:
+                    # Enhance the prompt with dataset context for better responses
+                    enhanced_prompt = f"""
+                    Dataset Context: {get_dataset_context()}
+                    
+                    User Query: {prompt}
+                    
+                    Please provide a comprehensive answer based on the available IPL 2025 data.
+                    """
+                    
                     # Create callback handler
                     callback_handler = StreamlitCallbackHandler(st.container())
                     
                     # Get response from agent
                     response = agent.run(
-                        input=prompt,
+                        input=enhanced_prompt,
                         callbacks=[callback_handler]
                     )
                     
@@ -607,41 +749,90 @@ if prompt := st.chat_input("Ask about IPL cricket stats..."):
 # ===================================================================
 
 with st.sidebar:
-    st.header("💡 Example Queries")
+    st.header("📊 Dataset Overview")
+    st.info(f"""
+    **IPL 2025 Data**
+    • {len(df):,} ball-by-ball records
+    • {len(DATASET_KNOWLEDGE['teams'])} teams
+    • Ball-by-ball match data
+    • Shot analysis & wagon wheels
+    • Real-time win probabilities
+    """)
     
-    st.subheader("🎯 Basic Stats")
-    if st.button("Top run scorers", key="runs"):
-        st.session_state.messages.append({"role": "user", "content": "Who are the top run scorers in IPL 2025?"})
+    # Smart suggestions based on dataset
+    with st.expander("🏏 Teams Available"):
+        teams_text = "\n".join([f"• {team}" for team in DATASET_KNOWLEDGE['teams'][:5]])
+        st.text(teams_text)
+        if len(DATASET_KNOWLEDGE['teams']) > 5:
+            st.text(f"...and {len(DATASET_KNOWLEDGE['teams']) - 5} more")
+    
+    with st.expander("👥 Key Players"):
+        st.text("**Batters:**")
+        batters_text = "\n".join([f"• {player}" for player in DATASET_KNOWLEDGE['key_players']['batters'][:5]])
+        st.text(batters_text)
+        st.text("\n**Bowlers:**")
+        bowlers_text = "\n".join([f"• {player}" for player in DATASET_KNOWLEDGE['key_players']['bowlers'][:5]])
+        st.text(bowlers_text)
+    
+    st.divider()
+    st.header("💡 Smart Query Suggestions")
+    
+    st.subheader("🎯 Player Analysis")
+    if st.button("V Kohli's performance", key="kohli"):
+        st.session_state.messages.append({"role": "user", "content": "How did V Kohli perform this season?"})
         st.rerun()
     
-    if st.button("Leading wicket takers", key="wickets"):
-        st.session_state.messages.append({"role": "user", "content": "Show me the leading wicket takers"})
+    if st.button("SP Narine batting stats", key="narine"):
+        st.session_state.messages.append({"role": "user", "content": "Show SP Narine's batting performance"})
         st.rerun()
     
-    st.subheader("📊 Team Analysis")
-    if st.button("Team run rates", key="team_rr"):
-        st.session_state.messages.append({"role": "user", "content": "What are the team run rates?"})
+    st.subheader("🏆 Team Comparisons")
+    if st.button("KKR vs RCB head-to-head", key="teams"):
+        st.session_state.messages.append({"role": "user", "content": "Compare Kolkata Knight Riders vs Royal Challengers Bengaluru performance"})
         st.rerun()
     
-    if st.button("Powerplay performance", key="powerplay"):
-        st.session_state.messages.append({"role": "user", "content": "Show powerplay statistics for all teams"})
+    if st.button("Best team in powerplay", key="team_pp"):
+        st.session_state.messages.append({"role": "user", "content": "Which team performed best in powerplay overs?"})
         st.rerun()
     
-    st.subheader("⚡ Advanced")
-    if st.button("Death overs analysis", key="death"):
-        st.session_state.messages.append({"role": "user", "content": "Analyze death overs performance"})
+    st.subheader("📈 Advanced Analytics")
+    if st.button("Shot analysis patterns", key="shots"):
+        st.session_state.messages.append({"role": "user", "content": "Analyze shot patterns and types in IPL 2025"})
         st.rerun()
     
-    if st.button("Best partnerships", key="partnerships"):
-        st.session_state.messages.append({"role": "user", "content": "What are the best batting partnerships?"})
+    if st.button("Win probability insights", key="win_prob"):
+        st.session_state.messages.append({"role": "user", "content": "Show me interesting win probability moments"})
+        st.rerun()
+    
+    st.subheader("🎯 Quick Stats")
+    if st.button("Top boundaries", key="boundaries"):
+        st.session_state.messages.append({"role": "user", "content": "Who hit the most boundaries (4s and 6s)?"})
+        st.rerun()
+    
+    if st.button("Economy rates", key="economy"):
+        st.session_state.messages.append({"role": "user", "content": "Show bowlers with best economy rates"})
         st.rerun()
     
     st.divider()
+    st.subheader("🔧 Chat Controls")
     if st.button("🗑️ Clear Chat"):
         st.session_state.messages = [
             {"role": "assistant", "content": "Chat cleared! Ask me anything about IPL cricket! 🏏"}
         ]
         st.rerun()
+    
+    # Query tips
+    with st.expander("💡 Query Tips"):
+        st.markdown("""
+        **Try asking about:**
+        • Specific player stats
+        • Team comparisons
+        • Match phase analysis
+        • Shot type patterns
+        • Bowling styles
+        • Partnership details
+        • Venue statistics
+        """)
 
 # ===================================================================
 # 📊 FOOTER
