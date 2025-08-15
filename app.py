@@ -2,573 +2,373 @@
 app.py
 -------
 
-Streamlit UI + LangChain pandas‑agent chatbot for a cricket match CSV.
-All custom aggregations (batter, bowler, team, win‑probability, etc.) are
-implemented as pure‑Python functions in **utils.py** and exposed to the LLM
-via `StructuredTool`.
+Streamlit UI + LangChain cricket analytics chatbot using Groq API.
+Optimized for deployment with proper error handling and Groq integration.
 """
 
 import os
+import sys
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-# -------------------------------------------------
-# ✅  Correct imports for LangChain with Groq
-# -------------------------------------------------
-from langchain.agents import AgentType, initialize_agent, AgentExecutor
-from langchain_experimental.agents import create_pandas_dataframe_agent
-from langchain.tools import StructuredTool
-from langchain.agents.agent import AgentExecutor
-from langchain_groq import ChatGroq
-from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
+import traceback
 
-# -------------------------------------------------
-# 1️⃣  Load environment variables & CSV data
-# -------------------------------------------------
-load_dotenv()                     # reads .env (or the GitHub secret)
+# LangChain imports
+try:
+    from langchain.agents import AgentType, initialize_agent
+    from langchain.tools import StructuredTool
+    from langchain_groq import ChatGroq
+    from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
+except ImportError as e:
+    st.error(f"Missing required packages. Please run: pip install -r requirements.txt")
+    st.error(f"Import error: {e}")
+    st.stop()
 
 # Load environment variables
 load_dotenv()
 
-# Check for Groq API key in environment variables or GitHub secrets
-groq_api_key = os.environ.get('GROQ_API_KEY')
+# ===================================================================
+# 🔑 API KEY SETUP WITH PROPER ERROR HANDLING
+# ===================================================================
 
-if not groq_api_key:
-    st.warning("⚠️ GROQ_API_KEY not found in environment variables.")
-    st.info("""
-    **To use Groq API (FREE & FAST!):**
+def setup_groq_api():
+    """Setup Groq API with proper error handling"""
+    groq_api_key = os.getenv('GROQ_API_KEY')
+    
+    if not groq_api_key:
+        st.error("⚠️ GROQ_API_KEY not found!")
+        st.info("""
+        **Setup Instructions:**
+        
+        1. Get FREE API key: https://console.groq.com/
+        2. For local development:
+           ```
+           echo "GROQ_API_KEY=your_key_here" > .env
+           ```
+        3. For deployment, add GROQ_API_KEY to your platform's environment variables
+        
+        **Why Groq?**
+        - 🆓 FREE tier: 14,400 requests/day
+        - ⚡ Ultra-fast responses (fastest in market)
+        - 💰 70% cheaper than alternatives
+        """)
+        return None
+    
+    return groq_api_key
 
-    For local development:
-    1. Get a FREE API key from https://console.groq.com/
-    2. Create a `.env` file in the project root with:
-       ```
-       GROQ_API_KEY=your_api_key_here
-       ```
-    3. Restart the app
-    
-    For deployment:
-    1. Add GROQ_API_KEY as a repository secret in your GitHub repository
-    2. The GitHub Actions workflow will automatically use it
-    
-    **Benefits of Groq:**
-    - 🚀 Ultra-fast inference (fastest in market)
-    - 💰 FREE tier: 14,400 requests/day
-    - 📊 Paid tier: $0.27-$0.59 per 1M tokens (70% cheaper than OpenAI)
-    - 🤖 Access to Llama 3.1 70B, Mixtral 8x7B, Gemma models
-    """)
+# Setup API
+api_key = setup_groq_api()
+if not api_key:
     st.stop()
-
-# Set the API key for Groq
-os.environ['GROQ_API_KEY'] = groq_api_key
 
 st.success("✅ Groq API configured successfully! 🚀")
 
+# ===================================================================
+# 📊 DATA LOADING WITH ERROR HANDLING
+# ===================================================================
 
-@st.cache_data(ttl="2h")   # cache the DataFrame for 2 hours – speeds up reloads
-def load_data(csv_path: str) -> pd.DataFrame:
-    """
-    Load the CSV and perform a minimal clean‑up.
-    Adjust column names here if your CSV differs.
-    """
-    df = pd.read_csv(csv_path, low_memory=False)
+@st.cache_data(ttl=7200)  # Cache for 2 hours
+def load_cricket_data():
+    """Load and clean cricket data with error handling"""
+    try:
+        # Try different possible paths for the CSV file
+        possible_paths = [
+            "cricket_data.csv",
+            "./cricket_data.csv",
+            os.path.join(os.getcwd(), "cricket_data.csv")
+        ]
+        
+        df = None
+        for path in possible_paths:
+            try:
+                if os.path.exists(path):
+                    df = pd.read_csv(path, low_memory=False)
+                    st.success(f"📊 Data loaded from: {path}")
+                    break
+            except Exception as e:
+                continue
+        
+        if df is None:
+            st.error("❌ Could not find cricket_data.csv file!")
+            st.info("Please ensure cricket_data.csv is in the project root directory.")
+            return None
+        
+        # Data cleaning
+        numeric_cols = ["over", "runs_total", "runs_batter", "balls_faced"]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        
+        # Boolean conversion
+        bool_cols = ["isFour", "isSix", "isWicket"]
+        for col in bool_cols:
+            if col in df.columns:
+                df[col] = df[col].astype(bool)
+        
+        # String columns
+        str_cols = ["bowling_style", "bowling_type", "bat_hand"]
+        for col in str_cols:
+            if col in df.columns:
+                df[col] = df[col].fillna("").astype(str)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return None
 
-    # Cast numeric columns (invalid entries become NaN)
-    df["over"] = pd.to_numeric(df["over"], errors="coerce")
-    df["runs_total"] = pd.to_numeric(df["runs_total"], errors="coerce")
-    df["runs_batter"] = pd.to_numeric(df["runs_batter"], errors="coerce")
-    df["balls_faced"] = pd.to_numeric(df["balls_faced"], errors="coerce")
+# Load data
+df = load_cricket_data()
+if df is None:
+    st.stop()
 
-    # Boolean flags (0/1 → False/True)
-    df["isFour"] = df["isFour"].astype(bool)
-    df["isSix"] = df["isSix"].astype(bool)
-    df["isWicket"] = df["isWicket"].astype(bool)
+st.info(f"📈 Dataset: {len(df):,} records loaded successfully")
 
-    # Ensure bowling_style exists and is a string
-    df["bowling_style"] = df["bowling_style"].fillna("").astype(str)
-    df["bowling_type"] = df["bowling_type"].fillna("").astype(str)
-    df["bat_hand"] = df["bat_hand"].fillna("").astype(str)
+# ===================================================================
+# 🤖 LLM SETUP WITH GROQ
+# ===================================================================
 
-    return df
+def create_groq_llm():
+    """Create Groq LLM with error handling"""
+    try:
+        llm = ChatGroq(
+            groq_api_key=api_key,
+            model_name="llama3-70b-8192",  # Best model for cricket analysis
+            temperature=0,
+            max_retries=3,
+            timeout=60,  # Increased timeout for complex queries
+            streaming=True
+        )
+        return llm
+    except Exception as e:
+        st.error(f"Failed to initialize Groq LLM: {str(e)}")
+        return None
 
+llm = create_groq_llm()
+if llm is None:
+    st.stop()
 
-# ----------------------------------------------------------------------
-# Load the CSV that sits in the repo root (rename if needed)
-# ----------------------------------------------------------------------
-df = load_data("cricket_data.csv")
+# ===================================================================
+# 🛠️ CRICKET ANALYSIS FUNCTIONS
+# ===================================================================
 
-# -------------------------------------------------
-# 2️⃣  LLM & custom tool definition (expanded)
-# -------------------------------------------------
-# Initialize Groq LLM (Fast & Cheap!)
-llm = ChatGroq(
-    groq_api_key=os.environ["GROQ_API_KEY"],
-    model_name="llama3-70b-8192",  # Best performance model
-    temperature=0,  # Deterministic responses
-    max_retries=3,
-    timeout=30,
-    # Optional: Use different models based on need
-    # "llama3-8b-8192" for faster responses
-    # "mixtral-8x7b-32768" for complex reasoning  
-    # "gemma-7b-it" for lightweight tasks
-)
+def safe_function_call(func, *args, **kwargs):
+    """Wrapper for safe function calls with error handling"""
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        return f"Error in analysis: {str(e)}"
 
-# ------------------------------------------------------------------
-# Import all helper functions from utils.py
-# ------------------------------------------------------------------
-from utils import (
-    # Basic Statistics
-    get_most_runs,
-    get_most_wickets,
-    get_most_fours_and_sixes,
+# Import utility functions with error handling
+try:
+    from utils import (
+        get_most_runs, get_most_wickets, get_most_fours_and_sixes,
+        runs_by_overs_and_style, best_batters_death_overs, best_batters_vs_batting_hand,
+        bowler_conceded_runs, bowler_wickets, best_bowlers_death_overs,
+        best_bowlers_vs_batting_hand, bowler_economy, get_fielding_stats,
+        get_best_partnerships, team_total_runs, team_wickets_lost, team_run_rate,
+        get_match_results, get_venue_stats, get_powerplay_stats,
+        get_middle_overs_stats, get_death_overs_stats, get_team_best_batters,
+        get_team_best_bowlers, get_team_overall_stats, top_strike_rate,
+        win_probability, best_partnerships
+    )
+    st.success("✅ All cricket analysis functions loaded successfully")
+except ImportError as e:
+    st.error(f"Error importing utils: {e}")
+    st.stop()
+
+# ===================================================================
+# 🔧 TOOL CREATION
+# ===================================================================
+
+def create_tools():
+    """Create LangChain tools with error handling"""
+    tools = []
     
-    # Advanced Batting Analysis
-    runs_by_overs_and_style,
-    best_batters_death_overs,
-    best_batters_vs_batting_hand,
+    # Basic statistics tools
+    basic_tools = [
+        ("get_most_runs", lambda: safe_function_call(get_most_runs, df), "Get top run scorers"),
+        ("get_most_wickets", lambda: safe_function_call(get_most_wickets, df), "Get top wicket takers"),
+        ("get_most_boundaries", lambda: safe_function_call(get_most_fours_and_sixes, df), "Get players with most fours and sixes"),
+    ]
     
-    # Advanced Bowling Analysis
-    bowler_conceded_runs,
-    bowler_wickets,
-    best_bowlers_death_overs,
-    best_bowlers_vs_batting_hand,
-    bowler_economy,
+    # Team analysis tools
+    team_tools = [
+        ("team_total_runs", lambda: safe_function_call(team_total_runs, df), "Get total runs by team"),
+        ("team_run_rate", lambda: safe_function_call(team_run_rate, df), "Get run rates by team"),
+        ("powerplay_stats", lambda: safe_function_call(get_powerplay_stats, df), "Get powerplay statistics"),
+        ("middle_overs_stats", lambda: safe_function_call(get_middle_overs_stats, df), "Get middle overs statistics"),
+        ("death_overs_stats", lambda: safe_function_call(get_death_overs_stats, df), "Get death overs statistics"),
+    ]
     
-    # Fielding Analysis
-    get_fielding_stats,
+    # Advanced analysis tools
+    advanced_tools = [
+        ("fielding_stats", lambda: safe_function_call(get_fielding_stats, df), "Get fielding statistics"),
+        ("best_partnerships", lambda: safe_function_call(get_best_partnerships, df), "Get best partnerships"),
+        ("venue_stats", lambda: safe_function_call(get_venue_stats, df), "Get venue statistics"),
+    ]
     
-    # Partnership Analysis
-    get_best_partnerships,
+    # Create StructuredTool objects
+    all_tools = basic_tools + team_tools + advanced_tools
     
-    # Team Analysis
-    team_total_runs,
-    team_wickets_lost,
-    team_run_rate,
+    for name, func, description in all_tools:
+        try:
+            tool = StructuredTool.from_function(
+                func=func,
+                name=name,
+                description=description
+            )
+            tools.append(tool)
+        except Exception as e:
+            st.warning(f"Could not create tool {name}: {e}")
+            continue
     
-    # Match Analysis
-    get_match_results,
-    get_venue_stats,
-    
-    # Advanced Analytics
-    get_powerplay_stats,
-    get_middle_overs_stats,
-    get_death_overs_stats,
-    
-    # Team-Specific Analysis
-    get_team_best_batters,
-    get_team_best_bowlers,
-    get_team_overall_stats,
-    
-    # Utility Functions
-    top_strike_rate,
-    win_probability,
-    best_partnerships,
-)
+    return tools
 
-# ------------------------------------------------------------------
-# Wrap each helper in a StructuredTool so the LLM can call it.
-# ------------------------------------------------------------------
-tools = []
+tools = create_tools()
+st.success(f"✅ Created {len(tools)} analysis tools")
 
-# ------------------- Basic Statistics Tools -------------------------
-most_runs_tool = StructuredTool.from_function(
-    func=get_most_runs,
-    name="get_most_runs",
-    description="Get the top run scorers in the tournament"
-)
+# ===================================================================
+# 🤖 AGENT CREATION
+# ===================================================================
 
-most_wickets_tool = StructuredTool.from_function(
-    func=get_most_wickets,
-    name="get_most_wickets", 
-    description="Get the top wicket takers in the tournament"
-)
+def create_agent():
+    """Create LangChain agent with error handling"""
+    try:
+        agent = initialize_agent(
+            tools=tools,
+            llm=llm,
+            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True,
+            handle_parsing_errors=True,
+            max_iterations=5,  # Reduced for faster responses
+            early_stopping_method="generate"
+        )
+        return agent
+    except Exception as e:
+        st.error(f"Failed to create agent: {str(e)}")
+        return None
 
-most_boundaries_tool = StructuredTool.from_function(
-    func=get_most_fours_and_sixes,
-    name="get_most_fours_and_sixes",
-    description="Get players with most fours and sixes"
-)
+agent = create_agent()
+if agent is None:
+    st.stop()
 
-# ------------------- Advanced Batting Tools -------------------------
-runs_by_overs_tool = StructuredTool.from_function(
-    func=lambda overs_start, overs_end, bowling_style: runs_by_overs_and_style(
-        df, overs_start, overs_end, bowling_style
-    ),
-    name="runs_by_overs_and_style",
-    description="Get batting performance in specific overs vs bowling style (e.g., pace, spin)"
-)
+# ===================================================================
+# 🎨 STREAMLIT UI
+# ===================================================================
 
-death_overs_batting_tool = StructuredTool.from_function(
-    func=lambda bowling_type: best_batters_death_overs(df, bowling_type),
-    name="best_batters_death_overs",
-    description="Get best batters in death overs (16-20) vs specific bowling type (pace/spin/all)"
-)
-
-batting_vs_hand_tool = StructuredTool.from_function(
-    func=lambda bat_hand, overs_start, overs_end: best_batters_vs_batting_hand(
-        df, bat_hand, overs_start, overs_end
-    ),
-    name="best_batters_vs_batting_hand",
-    description="Get best batters vs specific batting hand (LHB/RHB) in given overs"
-)
-
-# ------------------- Advanced Bowling Tools -------------------------
-bowler_runs_tool = StructuredTool.from_function(
-    func=lambda overs_start, overs_end: bowler_conceded_runs(df, overs_start, overs_end),
-    name="bowler_conceded_runs",
-    description="Get runs conceded by bowlers in specific overs"
-)
-
-bowler_wickets_tool = StructuredTool.from_function(
-    func=lambda overs_start, overs_end: bowler_wickets(df, overs_start, overs_end),
-    name="bowler_wickets",
-    description="Get wickets taken by bowlers in specific overs"
-)
-
-death_overs_bowling_tool = StructuredTool.from_function(
-    func=lambda bat_hand: best_bowlers_death_overs(df, bat_hand),
-    name="best_bowlers_death_overs",
-    description="Get best bowlers in death overs (16-20) vs specific batting hand (LHB/RHB/all)"
-)
-
-bowling_vs_hand_tool = StructuredTool.from_function(
-    func=lambda bat_hand, overs_start, overs_end: best_bowlers_vs_batting_hand(
-        df, bat_hand, overs_start, overs_end
-    ),
-    name="best_bowlers_vs_batting_hand",
-    description="Get best bowlers vs specific batting hand (LHB/RHB) in given overs"
-)
-
-bowler_economy_tool = StructuredTool.from_function(
-    func=lambda overs_start, overs_end: bowler_economy(df, overs_start, overs_end),
-    name="bowler_economy",
-    description="Get economy rates for bowlers in specific overs"
-)
-
-# ------------------- Fielding Tools -------------------------
-fielding_tool = StructuredTool.from_function(
-    func=get_fielding_stats,
-    name="get_fielding_stats",
-    description="Get fielding statistics including catches, run-outs, stumpings"
-)
-
-# ------------------- Partnership Tools -------------------------
-partnerships_tool = StructuredTool.from_function(
-    func=get_best_partnerships,
-    name="get_best_partnerships",
-    description="Get the best batting partnerships in the tournament"
-)
-
-# ------------------- Team Analysis Tools -------------------------
-team_runs_tool = StructuredTool.from_function(
-    func=team_total_runs,
-    name="team_total_runs",
-    description="Get total runs scored by each team"
-)
-
-team_wickets_tool = StructuredTool.from_function(
-    func=team_wickets_lost,
-    name="team_wickets_lost",
-    description="Get wickets lost by each team"
-)
-
-team_runrate_tool = StructuredTool.from_function(
-    func=team_run_rate,
-    name="team_run_rate",
-    description="Get run rate for each team"
-)
-
-# ------------------- Match Analysis Tools -------------------------
-match_results_tool = StructuredTool.from_function(
-    func=get_match_results,
-    name="get_match_results",
-    description="Get match results and winners"
-)
-
-venue_stats_tool = StructuredTool.from_function(
-    func=get_venue_stats,
-    name="get_venue_stats",
-    description="Get statistics by venue"
-)
-
-# ------------------- Advanced Analytics Tools -------------------------
-powerplay_tool = StructuredTool.from_function(
-    func=get_powerplay_stats,
-    name="get_powerplay_stats",
-    description="Get powerplay (1-6 overs) statistics for batting and bowling"
-)
-
-middle_overs_tool = StructuredTool.from_function(
-    func=get_middle_overs_stats,
-    name="get_middle_overs_stats",
-    description="Get middle overs (7-15) statistics for batting and bowling"
-)
-
-death_overs_stats_tool = StructuredTool.from_function(
-    func=get_death_overs_stats,
-    name="get_death_overs_stats",
-    description="Get death overs (16-20) statistics for batting and bowling"
-)
-
-# ------------------- Team-Specific Tools -------------------------
-team_batters_tool = StructuredTool.from_function(
-    func=lambda team_name: get_team_best_batters(df, team_name),
-    name="get_team_best_batters",
-    description="Get the best batters for a specific team (e.g., Chennai Super Kings, Mumbai Indians)"
-)
-
-team_bowlers_tool = StructuredTool.from_function(
-    func=lambda team_name: get_team_best_bowlers(df, team_name),
-    name="get_team_best_bowlers",
-    description="Get the best bowlers for a specific team"
-)
-
-team_stats_tool = StructuredTool.from_function(
-    func=lambda team_name: get_team_overall_stats(df, team_name),
-    name="get_team_overall_stats",
-    description="Get overall statistics for a specific team"
-)
-
-# ------------------- Utility Tools -------------------------
-strike_rate_tool = StructuredTool.from_function(
-    func=lambda min_balls: top_strike_rate(df, min_balls),
-    name="top_strike_rate",
-    description="Get top strike rates for batters with minimum balls faced"
-)
-
-win_prob_tool = StructuredTool.from_function(
-    func=lambda team: win_probability(df, team),
-    name="win_probability",
-    description="Get win probability for a specific team"
-)
-
-# ------------------- Add all tools to the list -------------------------
-tools.extend([
-    most_runs_tool,
-    most_wickets_tool,
-    most_boundaries_tool,
-    runs_by_overs_tool,
-    death_overs_batting_tool,
-    batting_vs_hand_tool,
-    bowler_runs_tool,
-    bowler_wickets_tool,
-    death_overs_bowling_tool,
-    bowling_vs_hand_tool,
-    bowler_economy_tool,
-    fielding_tool,
-    partnerships_tool,
-    team_runs_tool,
-    team_wickets_tool,
-    team_runrate_tool,
-    match_results_tool,
-    venue_stats_tool,
-    powerplay_tool,
-    middle_overs_tool,
-    death_overs_stats_tool,
-    team_batters_tool,
-    team_bowlers_tool,
-    team_stats_tool,
-    strike_rate_tool,
-    win_prob_tool,
-])
-
-# -------------------------------------------------
-# 3️⃣  Create the agent with better DataFrame handling
-# -------------------------------------------------
-# Create a custom agent executor to handle pandas DataFrames better
-agent = AgentExecutor.from_agent_and_tools(
-    tools=tools,
-    llm=llm,
-    agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True,
-    handle_parsing_errors=True,
-    max_iterations=10,
-    return_intermediate_steps=True,
-    early_stopping_method="generate"
-)
-
-# Set a better system prompt for the agent
-if hasattr(agent, 'agent') and hasattr(agent.agent, 'llm_chain'):
-    agent.agent.llm_chain.prompt.template = """You are a cricket analytics expert assistant. You have access to comprehensive IPL 2025 cricket data and specialized tools to analyze it.
-
-When users ask questions about cricket, use the appropriate tools to provide detailed, accurate answers. Always use the specific tools available rather than generic responses.
-
-Available teams in the dataset:
-- Chennai Super Kings
-- Mumbai Indians
-- Royal Challengers Bengaluru
-- Kolkata Knight Riders
-- Delhi Capitals
-- Punjab Kings
-- Rajasthan Royals
-- Gujarat Titans
-- Lucknow Super Giants
-- Sunrisers Hyderabad
-
-For team-specific queries, use the team tools like get_team_best_batters, get_team_best_bowlers, or get_team_overall_stats.
-
-Always provide detailed, formatted responses with tables and statistics when available.
-
-{input}
-{agent_scratchpad}"""
-
-# -------------------------------------------------
-# 4️⃣  Streamlit UI
-# -------------------------------------------------
 st.set_page_config(
-    page_title="🏏 IPL 2025 Cricket Analytics Chatbot",
+    page_title="🏏 IPL Cricket Analytics",
     page_icon="🏏",
     layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 st.title("🏏 IPL 2025 Cricket Analytics Chatbot")
 st.markdown("""
-This chatbot can answer comprehensive cricket queries about IPL 2025 including:
+**Powered by Groq API** - Ultra-fast cricket insights with AI!
 
-### 🎯 **Simple Queries**
-- Most runs, wickets, fours, sixes
-- Team statistics and rankings
-- Match results and venues
+### 🎯 What I can analyze:
+- **Basic Stats**: Top run scorers, wicket takers, boundaries
+- **Team Performance**: Run rates, powerplay stats, team rankings  
+- **Advanced Analytics**: Death overs analysis, partnerships, venue stats
+- **Player Insights**: Strike rates, economy rates, fielding stats
 
-### 🚀 **Advanced Batting Analysis**
-- Best batters in death overs vs pace/spin
-- Performance vs specific bowling types
-- Strike rates and boundary analysis
-
-### 🎾 **Advanced Bowling Analysis**  
-- Best bowlers in death overs vs RHB/LHB
-- Economy rates in specific overs
-- Wicket-taking analysis
-
-### 🏃‍♂️ **Fielding & Partnerships**
-- Catches, run-outs, stumpings
-- Best batting partnerships
-- Team fielding performance
-
-### 📊 **Phase-wise Analysis**
-- Powerplay (1-6 overs) statistics
-- Middle overs (7-15) performance
-- Death overs (16-20) analysis
-
-**Ask me anything about IPL 2025 cricket!** 🏏
+**Ask me anything about IPL cricket!** ⚡
 """)
 
-# -------------------------------------------------
-# 5️⃣  Chat interface
-# -------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# ===================================================================
+# 💬 CHAT INTERFACE
+# ===================================================================
 
-# Display chat messages
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hi! I'm your IPL cricket analytics assistant. Ask me anything about player performance, team stats, or match insights! 🏏"}
+    ]
+
+# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # Chat input
-if prompt := st.chat_input("Ask me about IPL 2025 cricket..."):
-    # Add user message to chat history
+if prompt := st.chat_input("Ask about IPL cricket stats..."):
+    # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
+    
     with st.chat_message("user"):
         st.markdown(prompt)
-
-    # Display assistant response
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-        
-        # Create callback handler for streaming
-        callback_handler = StreamlitCallbackHandler(
-            parent_container=message_placeholder,
-            max_thought_containers=10,
-            expand_new_thoughts=True,
-            collapse_completed_thoughts=True,
-        )
-        
-        try:
-            # Run the agent with streaming
-            response = agent.run(
-                prompt,
-                callbacks=[callback_handler],
-            )
-            full_response = response
-            
-        except Exception as e:
-            full_response = f"❌ Error: {str(e)}"
-            st.error(f"An error occurred: {str(e)}")
-        
-        # Update the message placeholder with final response
-        message_placeholder.markdown(full_response)
     
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+    # Generate response
+    with st.chat_message("assistant"):
+        with st.spinner("Analyzing cricket data..."):
+            try:
+                # Create callback handler
+                callback_handler = StreamlitCallbackHandler(st.container())
+                
+                # Get response from agent
+                response = agent.run(
+                    input=prompt,
+                    callbacks=[callback_handler]
+                )
+                
+                st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                
+            except Exception as e:
+                error_msg = f"Sorry, I encountered an error: {str(e)}"
+                st.error(error_msg)
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
-# -------------------------------------------------
-# 6️⃣  Sidebar with example queries
-# -------------------------------------------------
+# ===================================================================
+# 📋 SIDEBAR WITH EXAMPLES
+# ===================================================================
+
 with st.sidebar:
     st.header("💡 Example Queries")
     
     st.subheader("🎯 Basic Stats")
-    if st.button("Most runs in IPL 2025"):
-        st.session_state.messages.append({"role": "user", "content": "Who has scored the most runs in IPL 2025?"})
+    if st.button("Top run scorers", key="runs"):
+        st.session_state.messages.append({"role": "user", "content": "Who are the top run scorers in IPL 2025?"})
         st.rerun()
     
-    if st.button("Most wickets"):
-        st.session_state.messages.append({"role": "user", "content": "Who has taken the most wickets in IPL 2025?"})
-        st.rerun()
-    
-    if st.button("Most boundaries"):
-        st.session_state.messages.append({"role": "user", "content": "Who has hit the most fours and sixes?"})
-        st.rerun()
-    
-    st.subheader("🚀 Advanced Batting")
-    if st.button("Best batters in death overs"):
-        st.session_state.messages.append({"role": "user", "content": "Who are the best batters in death overs (16-20) vs pace bowling?"})
-        st.rerun()
-    
-    if st.button("Best batters vs RHB"):
-        st.session_state.messages.append({"role": "user", "content": "Who are the best batters vs right-handed batsmen in overs 16-20?"})
-        st.rerun()
-    
-    st.subheader("🎾 Advanced Bowling")
-    if st.button("Best bowlers in death overs"):
-        st.session_state.messages.append({"role": "user", "content": "Who are the best bowlers in death overs vs right-handed batsmen?"})
-        st.rerun()
-    
-    if st.button("Best economy rates"):
-        st.session_state.messages.append({"role": "user", "content": "Who has the best economy rate in overs 16-20?"})
+    if st.button("Leading wicket takers", key="wickets"):
+        st.session_state.messages.append({"role": "user", "content": "Show me the leading wicket takers"})
         st.rerun()
     
     st.subheader("📊 Team Analysis")
-    if st.button("Team run rates"):
-        st.session_state.messages.append({"role": "user", "content": "What are the team run rates in IPL 2025?"})
+    if st.button("Team run rates", key="team_rr"):
+        st.session_state.messages.append({"role": "user", "content": "What are the team run rates?"})
         st.rerun()
     
-    if st.button("Powerplay stats"):
-        st.session_state.messages.append({"role": "user", "content": "Show me powerplay statistics for all teams"})
+    if st.button("Powerplay performance", key="powerplay"):
+        st.session_state.messages.append({"role": "user", "content": "Show powerplay statistics for all teams"})
         st.rerun()
     
-    st.subheader("🏃‍♂️ Fielding & Partnerships")
-    if st.button("Fielding stats"):
-        st.session_state.messages.append({"role": "user", "content": "Show me the best fielders with most catches and run-outs"})
+    st.subheader("⚡ Advanced")
+    if st.button("Death overs analysis", key="death"):
+        st.session_state.messages.append({"role": "user", "content": "Analyze death overs performance"})
         st.rerun()
     
-    if st.button("Best partnerships"):
-        st.session_state.messages.append({"role": "user", "content": "What are the best batting partnerships in IPL 2025?"})
+    if st.button("Best partnerships", key="partnerships"):
+        st.session_state.messages.append({"role": "user", "content": "What are the best batting partnerships?"})
         st.rerun()
     
-    # Clear chat button
+    st.divider()
     if st.button("🗑️ Clear Chat"):
-        st.session_state.messages = []
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Chat cleared! Ask me anything about IPL cricket! 🏏"}
+        ]
         st.rerun()
 
-# -------------------------------------------------
-# 7️⃣  Footer
-# -------------------------------------------------
-st.markdown("---")
+# ===================================================================
+# 📊 FOOTER
+# ===================================================================
+
+st.divider()
 st.markdown("""
 <div style='text-align: center; color: #666;'>
-    <p>🏏 IPL 2025 Cricket Analytics Chatbot | Powered by LangChain & Groq 🚀</p>
-    <p>Ask me anything about batting, bowling, fielding, partnerships, and team performance!</p>
-    <p style='font-size: 12px; color: #999;'>💰 Ultra-fast inference • FREE tier available • 70% cheaper than alternatives</p>
+    <p>🏏 <b>IPL Cricket Analytics Chatbot</b> | Powered by <b>Groq API</b> ⚡</p>
+    <p style='font-size: 12px;'>Ultra-fast inference • FREE tier • 70% cheaper than alternatives</p>
 </div>
 """, unsafe_allow_html=True)
