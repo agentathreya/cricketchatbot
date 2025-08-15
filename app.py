@@ -136,12 +136,27 @@ def create_groq_llm():
             model_name="llama3-70b-8192",  # Best model for cricket analysis
             temperature=0,
             max_retries=3,
-            timeout=60,  # Increased timeout for complex queries
+            timeout=90,  # Increased timeout for step-by-step reasoning
             streaming=True
         )
         return llm
     except Exception as e:
         st.error(f"Failed to initialize Groq LLM: {str(e)}")
+        return None
+
+def create_reasoning_llm():
+    """Create a separate LLM instance for reasoning and planning"""
+    try:
+        reasoning_llm = ChatGroq(
+            groq_api_key=api_key,
+            model_name="llama3-70b-8192", 
+            temperature=0.1,  # Slightly higher for creative reasoning
+            max_retries=2,
+            timeout=30
+        )
+        return reasoning_llm
+    except Exception as e:
+        st.error(f"Failed to initialize reasoning LLM: {str(e)}")
         return None
 
 llm = create_groq_llm()
@@ -351,7 +366,173 @@ st.markdown("""
 """)
 
 # ===================================================================
-# 💬 CHAT INTERFACE
+# 🧠 STRUCTURED REASONING SYSTEM
+# ===================================================================
+
+def analyze_query_step_by_step(user_query: str):
+    """Implement structured reasoning: Understand → Plan → Execute → Present"""
+    
+    # Create reasoning LLM
+    reasoning_llm = create_reasoning_llm()
+    if not reasoning_llm:
+        return None, "Failed to initialize reasoning system"
+    
+    # Step 1: 🎯 UNDERSTAND the query
+    with st.expander("🎯 **Step 1: Understanding Your Question**", expanded=True):
+        st.write("Analyzing what you want to know...")
+        
+        understand_prompt = f"""
+        You are a cricket analytics expert. Analyze this user question and extract:
+        1. What type of cricket information they want (batting, bowling, team stats, etc.)
+        2. Any specific players, teams, or time periods mentioned
+        3. The level of detail needed (simple stats vs deep analysis)
+        
+        User Question: "{user_query}"
+        
+        Respond in this format:
+        **Query Type:** [batting/bowling/team/fielding/partnership/venue analysis]
+        **Entities:** [any specific players, teams, overs mentioned]
+        **Analysis Level:** [basic stats/advanced analysis/comparison]
+        **Intent:** [brief summary of what user wants to know]
+        """
+        
+        try:
+            understanding = reasoning_llm.invoke(understand_prompt).content
+            st.markdown(understanding)
+        except Exception as e:
+            understanding = f"Error in understanding: {str(e)}"
+            st.error(understanding)
+    
+    # Step 2: 📋 PLAN the analysis
+    with st.expander("📋 **Step 2: Planning the Analysis**", expanded=True):
+        st.write("Determining the best approach...")
+        
+        # Available tools for planning
+        available_tools = [
+            "get_most_runs - Top run scorers",
+            "get_most_wickets - Top wicket takers", 
+            "get_most_boundaries - Most fours and sixes",
+            "team_total_runs - Team run totals",
+            "team_run_rates - Team run rates",
+            "powerplay_stats - Powerplay statistics",
+            "middle_overs_stats - Middle overs stats",
+            "death_overs_stats - Death overs stats",
+            "fielding_stats - Fielding statistics",
+            "best_partnerships - Best partnerships",
+            "venue_stats - Venue statistics"
+        ]
+        
+        plan_prompt = f"""
+        Based on the user query and understanding, determine the best analysis approach.
+        
+        User Query: "{user_query}"
+        Understanding: {understanding}
+        
+        Available Analysis Tools:
+        {chr(10).join(available_tools)}
+        
+        Respond with:
+        **Selected Tool:** [exact tool name from the list above]
+        **Reasoning:** [why this tool is best for the query]
+        **Expected Output:** [what kind of results this will provide]
+        """
+        
+        try:
+            plan = reasoning_llm.invoke(plan_prompt).content
+            st.markdown(plan)
+            
+            # Extract the selected tool
+            selected_tool = None
+            for line in plan.split('\n'):
+                if line.startswith('**Selected Tool:**'):
+                    tool_name = line.split(':', 1)[1].strip()
+                    selected_tool = tool_name
+                    break
+        except Exception as e:
+            plan = f"Error in planning: {str(e)}"
+            st.error(plan)
+            selected_tool = None
+    
+    # Step 3: ⚡ EXECUTE the analysis
+    with st.expander("⚡ **Step 3: Executing the Analysis**", expanded=True):
+        st.write("Running the cricket data analysis...")
+        
+        if selected_tool:
+            try:
+                # Map tool names to functions
+                tool_mapping = {
+                    "get_most_runs": get_most_runs,
+                    "get_most_wickets": get_most_wickets,
+                    "get_most_boundaries": get_most_fours_and_sixes,
+                    "team_total_runs": team_total_runs,
+                    "team_run_rates": team_run_rate,
+                    "powerplay_stats": get_powerplay_stats,
+                    "middle_overs_stats": get_middle_overs_stats,
+                    "death_overs_stats": get_death_overs_stats,
+                    "fielding_stats": get_fielding_stats,
+                    "best_partnerships": get_best_partnerships,
+                    "venue_stats": get_venue_stats
+                }
+                
+                if selected_tool in tool_mapping:
+                    with st.spinner(f"Running {selected_tool} analysis..."):
+                        result = safe_function_call(tool_mapping[selected_tool], df)
+                    st.success("✅ Analysis completed!")
+                    st.code(f"Executed: {selected_tool}(cricket_data)", language="python")
+                else:
+                    result = "Tool not found. Using default analysis..."
+                    result = safe_function_call(get_most_runs, df)
+            except Exception as e:
+                result = f"Error executing analysis: {str(e)}"
+                st.error(result)
+        else:
+            result = "Could not determine appropriate analysis tool"
+            st.warning(result)
+    
+    # Step 4: 📊 PRESENT the results  
+    with st.expander("📊 **Step 4: Presenting the Results**", expanded=True):
+        st.write("Formatting and presenting your cricket insights...")
+        
+        if result and not result.startswith("Error"):
+            # Generate a comprehensive explanation
+            present_prompt = f"""
+            You are a cricket commentator explaining analysis results to fans.
+            
+            Original Question: "{user_query}"
+            Analysis Results: {result}
+            
+            Create a comprehensive response that:
+            1. Directly answers the user's question
+            2. Provides context and insights from the data
+            3. Highlights key findings and interesting patterns
+            4. Uses cricket terminology appropriately
+            
+            Format your response with clear headings and bullet points for readability.
+            """
+            
+            try:
+                final_response = reasoning_llm.invoke(present_prompt).content
+                st.markdown("### 🏏 **Cricket Analysis Results**")
+                st.markdown(final_response)
+                
+                # Also show the raw data in an expandable section
+                with st.expander("📈 **Raw Data Results**"):
+                    if isinstance(result, str) and '|' in result:
+                        st.markdown(result)
+                    else:
+                        st.text(result)
+                        
+                return final_response, None
+            except Exception as e:
+                error_msg = f"Error in presentation: {str(e)}"
+                st.error(error_msg)
+                return result, error_msg
+        else:
+            st.error("No valid results to present")
+            return result, "No valid results"
+
+# ===================================================================
+# 💬 CHAT INTERFACE WITH STRUCTURED REASONING
 # ===================================================================
 
 if "messages" not in st.session_state:
@@ -364,6 +545,23 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# Analysis mode toggle
+st.markdown("---")
+col1, col2 = st.columns(2)
+with col1:
+    analysis_mode = st.radio(
+        "🔬 Analysis Mode:",
+        ["🤖 Standard Chat", "🧠 Step-by-Step Reasoning"],
+        index=0
+    )
+
+with col2:
+    st.markdown("**Analysis Mode Info:**")
+    if "Standard" in analysis_mode:
+        st.info("💬 Direct LLM agent responses")
+    else:
+        st.info("🔍 Structured reasoning with 4 steps")
+
 # Chat input
 if prompt := st.chat_input("Ask about IPL cricket stats..."):
     # Add user message
@@ -372,26 +570,37 @@ if prompt := st.chat_input("Ask about IPL cricket stats..."):
     with st.chat_message("user"):
         st.markdown(prompt)
     
-    # Generate response
+    # Generate response based on selected mode
     with st.chat_message("assistant"):
-        with st.spinner("Analyzing cricket data..."):
-            try:
-                # Create callback handler
-                callback_handler = StreamlitCallbackHandler(st.container())
-                
-                # Get response from agent
-                response = agent.run(
-                    input=prompt,
-                    callbacks=[callback_handler]
-                )
-                
-                st.markdown(response)
+        if "Step-by-Step" in analysis_mode:
+            # Use structured reasoning approach
+            st.markdown("## 🧠 **Step-by-Step Cricket Analysis**")
+            response, error = analyze_query_step_by_step(prompt)
+            if error:
+                st.error(f"Analysis error: {error}")
+            
+            if response:
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                
-            except Exception as e:
-                error_msg = f"Sorry, I encountered an error: {str(e)}"
-                st.error(error_msg)
-                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+        else:
+            # Use standard agent approach
+            with st.spinner("Analyzing cricket data..."):
+                try:
+                    # Create callback handler
+                    callback_handler = StreamlitCallbackHandler(st.container())
+                    
+                    # Get response from agent
+                    response = agent.run(
+                        input=prompt,
+                        callbacks=[callback_handler]
+                    )
+                    
+                    st.markdown(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    
+                except Exception as e:
+                    error_msg = f"Sorry, I encountered an error: {str(e)}"
+                    st.error(error_msg)
+                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
 # ===================================================================
 # 📋 SIDEBAR WITH EXAMPLES
